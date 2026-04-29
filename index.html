@@ -1,0 +1,408 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sean Diab</title>
+  <style>
+    :root {
+      --bg: #fdfdfc;
+      --text: #1b1d1f;
+      --muted: #5c6166;
+      --line: #e7e8ea;
+      --link: #2f5a9b;
+      --portrait-border: #d8dadd;
+      --portrait-bg: #f1f1f1;
+      --maxw: 760px;
+    }
+
+    html[data-theme="dark"] {
+      --bg: #181810;
+      --text: #d6d2cd;
+      --muted: #aba398;
+      --line: #363b3d;
+      --link: #7baad7;
+      --portrait-border: #363b3d;
+      --portrait-bg: #1e2022;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #181810;
+        --text: #d6d2cd;
+        --muted: #aba398;
+        --line: #363b3d;
+        --link: #7baad7;
+        --portrait-border: #363b3d;
+        --portrait-bg: #1e2022;
+      }
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--text);
+      transition: background 0.2s, color 0.2s;
+    }
+
+    #theme-toggle {
+      position: fixed;
+      top: 16px;
+      right: 20px;
+      background: none;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      border-radius: 50%;
+      width: 34px;
+      height: 34px;
+      cursor: pointer;
+      font-size: 15px;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: border-color 0.2s, color 0.2s;
+      z-index: 100;
+    }
+
+    #theme-toggle:hover {
+      border-color: var(--text);
+      color: var(--text);
+    }
+
+    body {
+      font-family: Georgia, "Times New Roman", Times, serif;
+      line-height: 1.65;
+      font-size: 18px;
+    }
+
+    .page {
+      max-width: var(--maxw);
+      margin: 0 auto;
+      padding: 38px 22px 56px;
+    }
+
+    h1, h2, h3 {
+      margin: 0;
+      font-weight: 500;
+      line-height: 1.25;
+      letter-spacing: 0.01em;
+    }
+
+    h1 {
+      font-size: clamp(2rem, 4.8vw, 2.8rem);
+      margin-bottom: 8px;
+    }
+
+    h2 {
+      font-size: 1.45rem;
+      margin-bottom: 10px;
+      margin-top: 34px;
+    }
+
+    p { margin: 0 0 14px; }
+
+    a {
+      color: var(--link);
+      text-decoration: none;
+    }
+
+    a:hover { text-decoration: underline; }
+
+    .top {
+      display: grid;
+      grid-template-columns: 160px 1fr;
+      gap: 22px;
+      align-items: start;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 22px;
+      margin-bottom: 16px;
+    }
+
+    .portrait {
+      width: 160px;
+      height: 160px;
+      border-radius: 50%;
+      overflow: hidden;
+      border: 1px solid var(--portrait-border);
+      background: var(--portrait-bg);
+    }
+
+    .portrait img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center 22%;
+      display: block;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 1rem;
+      margin-bottom: 10px;
+    }
+
+    .links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 18px;
+      margin-top: 6px;
+      font-size: 0.98rem;
+    }
+
+    .section {
+      margin-top: 10px;
+    }
+
+    ul {
+      margin: 8px 0 0 20px;
+      padding: 0;
+    }
+
+    li {
+      margin-bottom: 8px;
+    }
+
+    .project {
+      margin-bottom: 20px;
+    }
+
+    .project h3 {
+      font-size: 1.12rem;
+      margin-bottom: 5px;
+    }
+
+    .project-media {
+      margin: 12px 0 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: var(--portrait-bg);
+    }
+
+    .project-media img,
+    .project-media video {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .project-caption {
+      color: var(--muted);
+      font-size: 0.92rem;
+      margin: 8px 0 0;
+    }
+
+    .gif-controls {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .gif-controls button {
+      font-family: inherit;
+      font-size: 0.92rem;
+      color: var(--text);
+      background: transparent;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 4px 10px;
+      cursor: pointer;
+    }
+
+    .gif-controls button:hover {
+      border-color: var(--text);
+    }
+
+    .meta {
+      color: var(--muted);
+      font-size: 0.95rem;
+      margin-bottom: 8px;
+    }
+
+    .foot {
+      margin-top: 34px;
+      border-top: 1px solid var(--line);
+      padding-top: 12px;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    @media (max-width: 700px) {
+      .top {
+        grid-template-columns: 1fr;
+      }
+      .portrait {
+        width: 130px;
+        height: 130px;
+      }
+      body { font-size: 17px; }
+    }
+  </style>
+</head>
+<body>
+  <button id="theme-toggle" aria-label="Toggle dark mode" title="Toggle dark mode"></button>
+  <main class="page">
+    <header class="top">
+      <div class="portrait">
+        <img src="./profile_pic.jpeg" alt="Sean Diab" />
+      </div>
+      <div>
+        <h1>Sean Diab</h1>
+        <p class="subtitle">Research Engineer | ML Engineer</p>
+        <p>
+          I build language models, training systems, and evaluation infrastructure. My recent work focuses on
+          non-autoregressive generation with explicit revision actions.
+        </p>
+        <div class="links">
+          <a href="mailto:diabsean2005@gmail.com">Email</a>
+          <a href="https://github.com/Sean-Diab" target="_blank" rel="noopener noreferrer">GitHub</a>
+          <a href="https://www.linkedin.com/in/sean-diab/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+          <a href="https://huggingface.co/sean-diab" target="_blank" rel="noopener noreferrer">Hugging Face</a>
+          <a href="./resume.pdf">Resume</a>
+        </div>
+      </div>
+    </header>
+
+    <section class="section">
+      <h2>About</h2>
+      <p>
+        I’m a research engineer focused on language model architecture, especially alternatives to standard
+        left-to-right autoregressive generation. I built Reviser end-to-end (100M and 300M), including model
+        design, training, inference, and benchmarking workflows.
+      </p>
+      <p>
+        I completed an M.S. in Computer Science (AI concentration) at CU Boulder and a B.S. in Mathematics at
+        Indiana University, both with a 4.0 GPA.
+      </p>
+    </section>
+
+    <section class="section">
+      <h2>Projects</h2>
+
+      <article class="project">
+        <h3>Reviser</h3>
+        <p class="meta">Solo research project · Dec 2025–Apr 2026</p>
+        <p>
+          Revision-capable language modeling via autoregressive cursor actions over a mutable token canvas
+          (
+          <em>Insert/Move/Stop</em>
+          ).
+        </p>
+        <ul>
+          <li>Built model, data pipeline, training loop, inference tooling, and evaluation stack in PyTorch.</li>
+          <li>Ran 3k-sample pairwise LLM-judge arenas; achieved 61.3% (100M) and 54.4% (300M) 1v1 win rate vs matched AR baselines, and 85.9%/78.3% vs SEDD/MDLM, on response quality.</li>
+          <li>Released code and paper; filed U.S. Provisional Patent Application No. 63/977,897.</li>
+        </ul>
+        <p>
+          <a href="https://github.com/Sean-Diab/Reviser" target="_blank" rel="noopener noreferrer">Code</a>
+          ·
+          <a href="https://github.com/Sean-Diab/Reviser/tree/main/paper" target="_blank" rel="noopener noreferrer">Paper</a>
+          ·
+          <a href="https://huggingface.co/sean-diab/reviser-checkpoints" target="_blank" rel="noopener noreferrer">Checkpoints</a>
+        </p>
+        <div class="project-media" id="reviser-demo-wrap">
+          <video id="reviser-demo-video" preload="auto" muted playsinline>
+            <source src="./reviser_edit_demo.mp4" type="video/mp4" />
+          </video>
+        </div>
+        <div class="gif-controls">
+          <button type="button" id="reviser-toggle">Pause</button>
+        </div>
+        <p class="project-caption">Editing trajectory demo from a real Reviser response: the canvas is incrementally revised via cursor actions.</p>
+        <p class="project-caption">Full interactive visualizations are available <a href="https://github.com/Sean-Diab/Reviser/tree/main/visualizations" target="_blank" rel="noopener noreferrer">here</a>.</p>
+      </article>
+
+      <article class="project">
+        <h3>FaceOff</h3>
+        <p class="meta">Founder & ML Engineer · Jan 2026–Present</p>
+        <p>
+          Real-time multiplayer voice + game-intelligence system with visual state detection, live session tracking,
+          backend coordination, and an ML game-review bot in development.
+        </p>
+        <ul>
+          <li>Implemented backend/bot services with FastAPI, Pydantic, discord.py, and SQLite.</li>
+          <li>Built visual state tracking and cross-machine session coordination via Cloudflare-backed HTTP APIs.</li>
+        </ul>
+      </article>
+
+      <article class="project">
+        <h3>The GPT Transformer: A Complete Mathematical and Architectural Analysis</h3>
+        <p class="meta">Solo research project · Mar 2025–Jun 2025</p>
+        <p>
+          Technical analysis of GPT forward/backward passes with full gradient derivations and implementation-level
+          checks connecting core theory to practical training behavior.
+        </p>
+        <p>
+          <a href="https://github.com/Sean-Diab/The-GPT-Transformer-A-Complete-Mathematical-and-Architectural-Analysis" target="_blank" rel="noopener noreferrer">GitHub</a>
+        </p>
+      </article>
+    </section>
+
+    <section class="section">
+      <h2>Interests</h2>
+      <p>Chess (~2200), Clash Royale (peaking top-100 globally), long-distance cycling, running.</p>
+    </section>
+
+    <p class="foot">Last updated: April 2026</p>
+  </main>
+  <script>
+    (function () {
+      var root = document.documentElement;
+      var btn = document.getElementById('theme-toggle');
+      var dark = '☀︎';
+      var light = '☾︎';
+
+      function isDark() {
+        var saved = localStorage.getItem('theme');
+        if (saved) return saved === 'dark';
+        return window.matchMedia('(prefers-color-scheme: dark)').matches;
+      }
+
+      function apply(dark_mode) {
+        root.setAttribute('data-theme', dark_mode ? 'dark' : 'light');
+        btn.innerHTML = dark_mode ? dark : light;
+      }
+
+      apply(isDark());
+
+      btn.addEventListener('click', function () {
+        var next = root.getAttribute('data-theme') !== 'dark';
+        localStorage.setItem('theme', next ? 'dark' : 'light');
+        apply(next);
+      });
+    })();
+
+    (function () {
+      var video = document.getElementById('reviser-demo-video');
+      var toggleBtn = document.getElementById('reviser-toggle');
+      if (!video || !toggleBtn) return;
+
+      var savedTime = 0;
+
+      video.addEventListener('ended', function () {
+        savedTime = 0;
+        video.currentTime = 0;
+        video.play();
+      });
+
+      video.play();
+
+      toggleBtn.addEventListener('click', function () {
+        if (video.paused) {
+          video.currentTime = savedTime;
+          video.play();
+          toggleBtn.textContent = 'Pause';
+        } else {
+          savedTime = video.currentTime;
+          video.pause();
+          toggleBtn.textContent = 'Play';
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
