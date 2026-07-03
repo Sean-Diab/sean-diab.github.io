@@ -304,9 +304,9 @@
       </p>
       <p>
         I also build production systems solo. Most recently I designed, shipped, and operated FaceOff — a
-        real-time streaming and opponent-voice platform for Clash Royale: a SwiftUI iOS app, FastAPI/PostgreSQL
-        backend, LiveKit/WebRTC media stack, and a computer-vision matchmaking pipeline, all built end-to-end
-        over five months.
+        real-time streaming and opponent-voice platform for Clash Royale: native iOS (SwiftUI) and Android
+        (Jetpack Compose) apps, a FastAPI/PostgreSQL backend, a LiveKit/WebRTC media stack, and a
+        computer-vision matchmaking pipeline, all built end-to-end over five months.
       </p>
       <p>
         I completed an M.S. in Computer Science with a Graduate Certificate in Artificial Intelligence at CU Boulder
@@ -362,15 +362,16 @@
         <h3>FaceOff</h3>
         <p class="meta">Solo project · Jan 2026–Jul 2026</p>
         <p>
-          A real-time social platform for Clash Royale, built and operated end-to-end: live screen-share
-          streaming with a TikTok-style watch experience, automatic opponent detection that connects two
-          matched players in live voice chat, per-match replay clips, and a public short-video community feed.
+          A real-time social platform for Clash Royale — native iOS and Android apps against one backend,
+          built and operated end-to-end: live screen-share streaming with a TikTok-style watch experience,
+          automatic opponent detection that connects two matched players in live voice chat, per-match replay
+          clips, and a public short-video community feed.
         </p>
         <ul>
-          <li>Computer-vision matchmaking: masked template matching + OCR over ReplayKit screen capture recognizes when two users are in the same match and auto-connects them in a LiveKit voice room; cut cross-device detection skew from 14&nbsp;s to sub-second.</li>
-          <li>Real-time media stack: native-resolution VP9 screen share over LiveKit/WebRTC, server-side ffmpeg recording with wall-clock CFR pacing for drift-free audio/video, and automatic per-match replay clipping anchored to Supercell API battle timestamps.</li>
-          <li>Production backend: FastAPI + PostgreSQL (asyncpg/Alembic), APNs/VoIP push, Apple/Google sign-in, moderation and rate limiting; deployed with systemd, Cloudflare Tunnel, and a dedicated LiveKit SFU; tested with pytest, XCUITest, and Maestro flows.</li>
-          <li>SwiftUI iOS app: broadcasting, live watching with chat, DMs and CallKit voice calls, multi-account Clash Royale profiles, and a battle log with auto-attached replay clips.</li>
+          <li>Computer-vision matchmaking: masked template matching + RapidOCR over ReplayKit/MediaProjection screen capture recognizes when two users are in the same match and auto-connects them in a LiveKit voice room; cut cross-device detection skew from 14&nbsp;s to sub-second.</li>
+          <li>Real-time media stack: 720p/60&nbsp;fps hardware H.264 screen share with a simulcast fallback over LiveKit/WebRTC (replaced software VP9 after measured frame-rate drops), zero-re-encode track-egress recording with an ffmpeg CFR fallback, and automatic per-match replay clipping anchored to Supercell API battle timestamps.</li>
+          <li>Production backend: FastAPI + PostgreSQL (asyncpg/Alembic), APNs/VoIP + FCM push, Apple/Google sign-in, moderation and rate limiting; deployed with systemd, Cloudflare Tunnel, and a dedicated LiveKit SFU; tested with pytest, contract-pinning XCTest/JUnit suites, and Maestro flows.</li>
+          <li>Native apps on both platforms — iOS (SwiftUI) and Android (Jetpack Compose) — sharing one JSON contract: broadcasting, live watching with chat, DMs and voice calls, multi-account Clash Royale profiles, and a battle log with auto-attached replay clips.</li>
         </ul>
         <!-- Media slots: drop faceoff_demo.mp4 and/or faceoff_shot_1.png ... faceoff_shot_4.png
              into the site root and these appear automatically on the next load. -->
