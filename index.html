@@ -457,16 +457,26 @@
       if (!video || !toggleBtn) return;
 
       var savedTime = 0;
+      var restartTimer = null;
 
       video.addEventListener('ended', function () {
         savedTime = 0;
-        video.currentTime = 0;
-        video.play();
+        restartTimer = setTimeout(function () {
+          restartTimer = null;
+          video.currentTime = 0;
+          video.play();
+        }, 1000);
       });
 
       video.play();
 
       toggleBtn.addEventListener('click', function () {
+        if (restartTimer) {
+          clearTimeout(restartTimer);
+          restartTimer = null;
+          toggleBtn.textContent = 'Play';
+          return;
+        }
         if (video.paused) {
           video.currentTime = savedTime;
           video.play();
