@@ -3,18 +3,33 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sean Diab</title>
-  <meta name="description" content="Sean Diab — research engineer focused on language model architecture and evaluation. Built Reviser, a revision-capable language model, and FaceOff, a real-time streaming and voice platform — solo, end-to-end." />
+  <title>Sean Diab | ML Research Engineer</title>
+  <meta name="description" content="ML research engineer who built Reviser, an edit-based language model, and FaceOff, a native cross-platform real-time streaming and voice platform." />
+  <link rel="canonical" href="https://sean-diab.github.io/" />
   <meta property="og:type" content="website" />
-  <meta property="og:title" content="Sean Diab — Research Engineer" />
-  <meta property="og:description" content="Built Reviser, a revision-capable language model (paper, code, checkpoints), and FaceOff, a real-time streaming and voice platform — solo, end-to-end. Seeking research engineering roles in LLMs, evals, and ML systems." />
+  <meta property="og:title" content="Sean Diab | ML Research Engineer" />
+  <meta property="og:description" content="Built Reviser, an edit-based language model, and FaceOff, a native cross-platform real-time streaming and voice platform." />
   <meta property="og:url" content="https://sean-diab.github.io/" />
   <meta property="og:image" content="https://sean-diab.github.io/profile_pic.jpeg" />
   <meta name="twitter:card" content="summary" />
-  <meta name="twitter:title" content="Sean Diab — Research Engineer" />
-  <meta name="twitter:description" content="Built Reviser, a revision-capable language model, and FaceOff, a real-time streaming and voice platform — solo, end-to-end." />
+  <meta name="twitter:title" content="Sean Diab | ML Research Engineer" />
+  <meta name="twitter:description" content="Built Reviser, an edit-based language model, and FaceOff, a native cross-platform real-time streaming and voice platform." />
   <meta name="twitter:image" content="https://sean-diab.github.io/profile_pic.jpeg" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%232f5a9b'/%3E%3Ctext x='50' y='68' font-size='46' text-anchor='middle' fill='white' font-family='Georgia,serif'%3ESD%3C/text%3E%3C/svg%3E" />
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Person",
+      "name": "Sean Diab",
+      "url": "https://sean-diab.github.io/",
+      "jobTitle": "ML Research Engineer",
+      "sameAs": [
+        "https://github.com/Sean-Diab",
+        "https://www.linkedin.com/in/sean-diab/",
+        "https://huggingface.co/sean-diab"
+      ]
+    }
+  </script>
   <style>
     :root {
       --bg: #fdfdfc;
@@ -235,20 +250,33 @@
     }
 
     .shot-row {
-      display: flex;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
       gap: 10px;
       margin: 12px 0 10px;
     }
 
     .shot-row[hidden] { display: none; }
 
-    .shot-row img {
-      flex: 1 1 0;
+    .shot {
+      margin: 0;
       min-width: 0;
+    }
+
+    .shot-row img {
+      width: 100%;
       border: 1px solid var(--line);
       border-radius: 8px;
       display: block;
       height: auto;
+    }
+
+    .shot figcaption {
+      color: var(--muted);
+      font-size: 0.78rem;
+      line-height: 1.35;
+      margin-top: 5px;
+      text-align: center;
     }
 
     .foot {
@@ -268,6 +296,11 @@
         height: 130px;
       }
       body { font-size: 17px; }
+      .shot-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html, body, #theme-toggle { transition: none; }
     }
   </style>
 </head>
@@ -276,14 +309,14 @@
   <main class="page">
     <header class="top">
       <div class="portrait">
-        <img src="./profile_pic.jpeg" alt="Sean Diab" />
+        <img src="./profile_pic.jpeg" alt="Sean Diab" width="3024" height="4032" />
       </div>
       <div>
         <h1>Sean Diab</h1>
         <p class="subtitle">Research Engineer | ML Engineer</p>
         <p>
-          I build language models, training systems, and evaluation infrastructure — and I ship production
-          systems end-to-end. My recent work focuses on non-autoregressive generation with explicit revision actions.
+          I build and evaluate language models and ship production ML systems end-to-end. My recent work includes
+          Reviser, an edit-based language model, and FaceOff, a native cross-platform real-time streaming and voice platform.
         </p>
         <div class="links">
           <a href="mailto:diabsean2005@gmail.com">Email</a>
@@ -298,27 +331,27 @@
     <section class="section">
       <h2>About</h2>
       <p>
-        I’m a research engineer focused on language model architecture, especially alternatives to standard
-        left-to-right autoregressive generation. I built Reviser end-to-end (100M and 300M), including model
-        design, training, inference, and benchmarking workflows.
+        I’m a research engineer focused on language-model architecture, particularly alternatives to standard
+        left-to-right generation. I built Reviser end-to-end at 100M and 300M parameters, including its architecture,
+        training pipeline, inference system, evaluation infrastructure, and interactive trajectory-analysis tools.
       </p>
       <p>
-        I also build production systems solo. Most recently I designed, shipped, and operated FaceOff — a
-        real-time streaming and opponent-voice platform for Clash Royale: native iOS (SwiftUI) and Android
-        (Jetpack Compose) apps, a FastAPI/PostgreSQL backend, a LiveKit/WebRTC media stack, and a
-        computer-vision matchmaking pipeline, all built end-to-end over five months.
+        I also founded and solo-built FaceOff, a real-time social and streaming platform for Clash Royale. It combined
+        native SwiftUI and Jetpack Compose applications, a FastAPI/PostgreSQL backend, LiveKit/WebRTC streaming and
+        voice, computer-vision opponent matching, replay processing, authentication, push notifications, moderation,
+        localization, and production infrastructure.
       </p>
       <p>
         I completed an M.S. in Computer Science with a Graduate Certificate in Artificial Intelligence at CU Boulder
-        and a B.S. in Mathematics at Indiana University, both with a 4.0 GPA.
+        and a B.S. in Mathematics at Indiana University East, both with a 4.0 GPA.
       </p>
     </section>
 
     <section class="section">
       <h2>Open Roles</h2>
       <p>
-        Seeking Research Engineer / ML Engineer roles in language models, model architecture, post-training,
-        evaluation, and ML systems infrastructure. Bay Area preferred; open to relocation for frontier-lab roles.
+        Seeking ML Research Engineer and ML Engineer roles involving language-model architecture, training,
+        evaluation, and production ML systems. Bay Area preferred; open to remote roles and relocation.
       </p>
     </section>
 
@@ -329,15 +362,14 @@
         <h3>Reviser</h3>
         <p class="meta">Solo research project · Dec 2025–Apr 2026</p>
         <p>
-          Revision-capable language modeling via autoregressive cursor actions over a mutable token canvas
-          (
-          <em>Insert/Move/Stop</em>
-          ).
+          An edit-based language model that generates text by applying <em>Insert</em>, <em>Move</em>, and
+          <em>Stop</em> actions to a mutable token canvas rather than appending tokens strictly from left to right.
         </p>
         <ul>
-          <li>Built model, data pipeline, training loop, inference tooling, and evaluation stack in PyTorch.</li>
-          <li>Ran 3k-sample pairwise LLM-judge arenas; achieved 61.3% (100M) and 54.4% (300M) 1v1 win rate vs matched AR baselines, and 85.9%/78.3% vs SEDD/MDLM, on response quality.</li>
-          <li>Released code and paper; filed U.S. Provisional Patent Application.</li>
+          <li>Built the model architecture, data pipeline, training loop, inference system, evaluation stack, and visualization tools end-to-end in PyTorch.</li>
+          <li>Ran 3,000-sample C4 pairwise LLM-judge arenas; achieved 61.3%/54.4% vs matched autoregressive baselines at 100M/300M parameters and 85.9%/78.3% vs SEDD/MDLM.</li>
+          <li>Developed obfuscation-to-restoration supervision and canvas-state conditioning to teach explicit revision behavior.</li>
+          <li>Released code, checkpoints, a paper, and interactive trajectory explorers; filed a U.S. provisional patent application.</li>
         </ul>
         <p>
           <a href="https://github.com/Sean-Diab/Reviser" target="_blank" rel="noopener noreferrer">Code</a>
@@ -360,31 +392,41 @@
 
       <article class="project">
         <h3>FaceOff</h3>
-        <p class="meta">Solo project · Jan 2026–Jul 2026</p>
+        <p class="meta">Founder &amp; ML/Systems Engineer · May 2026–Sep 2026</p>
         <p>
-          A real-time social platform for Clash Royale — native iOS and Android apps against one backend,
-          built and operated end-to-end: live screen-share streaming with a TikTok-style watch experience,
-          automatic opponent detection that connects two matched players in live voice chat, per-match replay
-          clips, and a public short-video community feed.
+          A real-time social and streaming platform for Clash Royale, solo-built end-to-end across native mobile
+          applications, backend services, computer vision, and real-time media infrastructure.
         </p>
         <ul>
-          <li>Computer-vision matchmaking: masked template matching + RapidOCR over ReplayKit/MediaProjection screen capture recognizes when two users are in the same match and auto-connects them in a LiveKit voice room; cut cross-device detection skew from 14&nbsp;s to sub-second.</li>
-          <li>Real-time media stack: 720p/60&nbsp;fps hardware H.264 screen share with a simulcast fallback over LiveKit/WebRTC (replaced software VP9 after measured frame-rate drops), zero-re-encode track-egress recording with an ffmpeg CFR fallback, and automatic per-match replay clipping anchored to Supercell API battle timestamps.</li>
-          <li>Production backend: FastAPI + PostgreSQL (asyncpg/Alembic), APNs/VoIP + FCM push, Apple/Google sign-in, moderation and rate limiting; deployed with systemd, Cloudflare Tunnel, and a dedicated LiveKit SFU; tested with pytest, contract-pinning XCTest/JUnit suites, and Maestro flows.</li>
-          <li>Native apps on both platforms — iOS (SwiftUI) and Android (Jetpack Compose) — sharing one JSON contract: broadcasting, live watching with chat, DMs and voice calls, multi-account Clash Royale profiles, and a battle log with auto-attached replay clips.</li>
+          <li>Built native SwiftUI iOS and Jetpack Compose Android applications against a shared FastAPI/PostgreSQL backend, including live broadcasting, watching with chat, social messaging and calls, Community posts, Studio media management, multi-account profiles, and replay-backed battle history.</li>
+          <li>Built a masked-template-matching and RapidOCR pipeline over ReplayKit and MediaProjection capture that recognized matched opponents and automatically connected them through LiveKit voice rooms; reduced cross-device detection skew from 14 seconds to sub-second.</li>
+          <li>Engineered hardware H.264 screen sharing at up to 1080p/60 fps, LiveKit/WebRTC media transport, a lower-resolution simulcast fallback, zero-re-encode recording with an ffmpeg CFR fallback, and automatic replay clipping aligned to Supercell battle timestamps.</li>
+          <li>Implemented Apple/Google authentication, APNs/VoIP and FCM push, moderation, privacy and retention controls, account verification, rate limiting, production deployment, monitoring, backups, and release/rollback infrastructure.</li>
+          <li>Localized the iOS, Android, backend, errors, and notifications across nine languages and visually validated 387 locale/screen states, including Arabic right-to-left layouts.</li>
         </ul>
-        <!-- Media slots: drop faceoff_demo.mp4 and/or faceoff_shot_1.png ... faceoff_shot_4.png
-             into the site root and these appear automatically on the next load. -->
+        <!-- Optional future video: add faceoff_demo.mp4 to the site root. -->
         <div class="project-media" id="faceoff-video-wrap" hidden>
           <video id="faceoff-demo-video" preload="metadata" muted playsinline controls>
             <source src="./faceoff_demo.mp4" type="video/mp4" />
           </video>
         </div>
-        <div class="shot-row" id="faceoff-shots" hidden>
-          <img src="./faceoff_shot_1.png" alt="FaceOff screenshot" loading="lazy" />
-          <img src="./faceoff_shot_2.png" alt="FaceOff screenshot" loading="lazy" />
-          <img src="./faceoff_shot_3.png" alt="FaceOff screenshot" loading="lazy" />
-          <img src="./faceoff_shot_4.png" alt="FaceOff screenshot" loading="lazy" />
+        <div class="shot-row" id="faceoff-shots">
+          <figure class="shot">
+            <img src="./faceoff_shot_1.png" alt="FaceOff iOS profile and screen-sharing interface" width="1206" height="2622" decoding="async" />
+            <figcaption>iOS profile &amp; broadcast</figcaption>
+          </figure>
+          <figure class="shot">
+            <img src="./faceoff_shot_2.png" alt="FaceOff iOS Studio stream management interface" width="1206" height="2622" decoding="async" />
+            <figcaption>iOS Studio</figcaption>
+          </figure>
+          <figure class="shot">
+            <img src="./faceoff_shot_3.png" alt="FaceOff Android profile and recent matches interface" width="1080" height="2400" decoding="async" />
+            <figcaption>Android profile &amp; matches</figcaption>
+          </figure>
+          <figure class="shot">
+            <img src="./faceoff_shot_4.png" alt="FaceOff Android live-stream watching interface" width="1080" height="2400" decoding="async" />
+            <figcaption>Android live stream</figcaption>
+          </figure>
         </div>
       </article>
 
@@ -406,7 +448,7 @@
       <p>Chess (~2200), Clash Royale (peaking top-100 globally), long-distance cycling, running.</p>
     </section>
 
-    <p class="foot">Last updated: July 2026</p>
+    <p class="foot">Last updated: September 2026</p>
   </main>
   <script>
     (function () {
@@ -442,13 +484,6 @@
       if (wrap && video) {
         video.addEventListener('loadedmetadata', function () { wrap.hidden = false; });
       }
-      var shots = document.getElementById('faceoff-shots');
-      if (shots) {
-        Array.prototype.forEach.call(shots.querySelectorAll('img'), function (img) {
-          img.addEventListener('load', function () { shots.hidden = false; });
-          img.addEventListener('error', function () { img.remove(); });
-        });
-      }
     })();
 
     (function () {
@@ -458,8 +493,10 @@
 
       var savedTime = 0;
       var restartTimer = null;
+      var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
       video.addEventListener('ended', function () {
+        if (reduceMotion) return;
         savedTime = 0;
         restartTimer = setTimeout(function () {
           restartTimer = null;
@@ -468,7 +505,11 @@
         }, 1000);
       });
 
-      video.play();
+      if (reduceMotion) {
+        toggleBtn.textContent = 'Play';
+      } else {
+        video.play();
+      }
 
       toggleBtn.addEventListener('click', function () {
         if (restartTimer) {
