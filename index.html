@@ -263,7 +263,24 @@
       min-width: 0;
     }
 
-    .shot-row img {
+    .shot-trigger {
+      appearance: none;
+      display: block;
+      width: 100%;
+      margin: 0;
+      padding: 0;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      cursor: zoom-in;
+    }
+
+    .shot-trigger:focus-visible {
+      outline: 3px solid var(--link);
+      outline-offset: 3px;
+    }
+
+    .shot-trigger img {
       width: 100%;
       border: 1px solid var(--line);
       border-radius: 8px;
@@ -277,6 +294,67 @@
       line-height: 1.35;
       margin-top: 5px;
       text-align: center;
+    }
+
+    .image-lightbox {
+      width: 100vw;
+      height: 100dvh;
+      max-width: none;
+      max-height: none;
+      margin: 0;
+      padding: 18px;
+      border: 0;
+      background: rgba(8, 10, 12, 0.96);
+      color: #fff;
+    }
+
+    .image-lightbox[open] {
+      display: grid;
+      grid-template-rows: minmax(0, 1fr) auto;
+      place-items: center;
+      gap: 10px;
+    }
+
+    .image-lightbox::backdrop {
+      background: rgba(8, 10, 12, 0.96);
+    }
+
+    .image-lightbox img {
+      width: auto;
+      height: auto;
+      max-width: 96vw;
+      max-height: calc(100dvh - 74px);
+      object-fit: contain;
+    }
+
+    .lightbox-caption {
+      margin: 0;
+      color: #d6d9dc;
+      font-size: 0.9rem;
+      line-height: 1.35;
+      text-align: center;
+    }
+
+    .lightbox-close {
+      position: fixed;
+      top: 14px;
+      right: 18px;
+      z-index: 1;
+      width: 42px;
+      height: 42px;
+      padding: 0;
+      border: 1px solid rgba(255, 255, 255, 0.45);
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.55);
+      color: #fff;
+      font: 30px/1 Arial, sans-serif;
+      cursor: pointer;
+    }
+
+    .lightbox-close:hover,
+    .lightbox-close:focus-visible {
+      border-color: #fff;
+      background: rgba(0, 0, 0, 0.8);
     }
 
     .foot {
@@ -412,19 +490,27 @@
         </div>
         <div class="shot-row" id="faceoff-shots">
           <figure class="shot">
-            <img src="./faceoff_shot_1.png" alt="FaceOff iOS profile and screen-sharing interface" width="1206" height="2622" decoding="async" />
+            <button class="shot-trigger" type="button" data-full="./faceoff_shot_1.png" data-caption="iOS profile &amp; broadcast" aria-label="View the FaceOff iOS profile and screen-sharing screenshot full screen">
+              <img src="./faceoff_shot_1.png" alt="FaceOff iOS profile and screen-sharing interface" width="1206" height="2622" decoding="async" />
+            </button>
             <figcaption>iOS profile &amp; broadcast</figcaption>
           </figure>
           <figure class="shot">
-            <img src="./faceoff_shot_2.png" alt="FaceOff iOS Studio stream management interface" width="1206" height="2622" decoding="async" />
+            <button class="shot-trigger" type="button" data-full="./faceoff_shot_2.png" data-caption="iOS Studio" aria-label="View the FaceOff iOS Studio screenshot full screen">
+              <img src="./faceoff_shot_2.png" alt="FaceOff iOS Studio stream management interface" width="1206" height="2622" decoding="async" />
+            </button>
             <figcaption>iOS Studio</figcaption>
           </figure>
           <figure class="shot">
-            <img src="./faceoff_shot_3.png" alt="FaceOff Android profile and recent matches interface" width="1080" height="2400" decoding="async" />
+            <button class="shot-trigger" type="button" data-full="./faceoff_shot_3.png" data-caption="Android profile &amp; matches" aria-label="View the FaceOff Android profile and recent matches screenshot full screen">
+              <img src="./faceoff_shot_3.png" alt="FaceOff Android profile and recent matches interface" width="1080" height="2400" decoding="async" />
+            </button>
             <figcaption>Android profile &amp; matches</figcaption>
           </figure>
           <figure class="shot">
-            <img src="./faceoff_shot_4.png" alt="FaceOff Android live-stream watching interface" width="1080" height="2400" decoding="async" />
+            <button class="shot-trigger" type="button" data-full="./faceoff_shot_4.png" data-caption="Android live stream" aria-label="View the FaceOff Android live-stream screenshot full screen">
+              <img src="./faceoff_shot_4.png" alt="FaceOff Android live-stream watching interface" width="1080" height="2400" decoding="async" />
+            </button>
             <figcaption>Android live stream</figcaption>
           </figure>
         </div>
@@ -450,6 +536,11 @@
 
     <p class="foot">Last updated: September 2026</p>
   </main>
+  <dialog class="image-lightbox" id="faceoff-lightbox" aria-label="Expanded FaceOff screenshot">
+    <button class="lightbox-close" type="button" aria-label="Close full-screen image">&times;</button>
+    <img id="faceoff-lightbox-image" alt="" />
+    <p class="lightbox-caption" id="faceoff-lightbox-caption"></p>
+  </dialog>
   <script>
     (function () {
       var root = document.documentElement;
@@ -484,6 +575,39 @@
       if (wrap && video) {
         video.addEventListener('loadedmetadata', function () { wrap.hidden = false; });
       }
+    })();
+
+    (function () {
+      var dialog = document.getElementById('faceoff-lightbox');
+      var image = document.getElementById('faceoff-lightbox-image');
+      var caption = document.getElementById('faceoff-lightbox-caption');
+      var closeBtn = dialog ? dialog.querySelector('.lightbox-close') : null;
+      var triggers = document.querySelectorAll('.shot-trigger');
+      if (!dialog || !image || !caption || !closeBtn || !triggers.length) return;
+
+      triggers.forEach(function (trigger) {
+        trigger.addEventListener('click', function () {
+          var thumbnail = trigger.querySelector('img');
+          image.src = trigger.getAttribute('data-full');
+          image.alt = thumbnail ? thumbnail.alt : 'Expanded FaceOff screenshot';
+          caption.textContent = trigger.getAttribute('data-caption') || '';
+          dialog.showModal();
+          document.body.style.overflow = 'hidden';
+        });
+      });
+
+      function closeLightbox() {
+        dialog.close();
+      }
+
+      closeBtn.addEventListener('click', closeLightbox);
+      dialog.addEventListener('click', function (event) {
+        if (event.target === dialog) closeLightbox();
+      });
+      dialog.addEventListener('close', function () {
+        document.body.style.overflow = '';
+        image.removeAttribute('src');
+      });
     })();
 
     (function () {
