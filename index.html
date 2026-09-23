@@ -222,6 +222,14 @@
       margin: 8px 0 0;
     }
 
+    .featured-demo h2 { margin-top: 24px; }
+
+    .featured-demo figure { margin: 0; }
+
+    .featured-demo .project-caption strong { color: var(--text); }
+
+    #reviser-project { scroll-margin-top: 24px; }
+
     .gif-controls {
       display: flex;
       gap: 8px;
@@ -367,12 +375,15 @@
 
     @media (max-width: 700px) {
       .top {
-        grid-template-columns: 1fr;
+        grid-template-columns: 84px minmax(0, 1fr);
+        gap: 16px;
       }
       .portrait {
-        width: 130px;
-        height: 130px;
+        width: 84px;
+        height: 84px;
       }
+      .top h1 { font-size: 2rem; }
+      .top .links { gap: 6px 12px; }
       body { font-size: 17px; }
       .shot-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
@@ -393,8 +404,7 @@
         <h1>Sean Diab</h1>
         <p class="subtitle">Research Engineer | ML Engineer</p>
         <p>
-          I build and evaluate language models and ship production ML systems end-to-end. My recent work includes
-          Reviser, an edit-based language model, and FaceOff, a native cross-platform real-time streaming and voice platform.
+          I build language models that edit as they write, and ship production ML systems end-to-end.
         </p>
         <div class="links">
           <a href="mailto:diabsean2005@gmail.com">Email</a>
@@ -405,6 +415,29 @@
         </div>
       </div>
     </header>
+
+    <section class="section featured-demo" aria-labelledby="reviser-demo-heading">
+      <h2 id="reviser-demo-heading">Reviser in action</h2>
+      <figure>
+        <div class="project-media" id="reviser-demo-wrap">
+          <video id="reviser-demo-video" preload="auto" muted playsinline aria-describedby="reviser-demo-caption">
+            <source src="./reviser_edit_demo.mp4" type="video/mp4" />
+          </video>
+        </div>
+        <figcaption class="project-caption" id="reviser-demo-caption">
+          <strong>A language model that edits as it writes.</strong> Watch Reviser move its cursor and insert text
+          throughout a response, rather than only adding words at the end.
+        </figcaption>
+      </figure>
+      <div class="gif-controls">
+        <button type="button" id="reviser-toggle" aria-controls="reviser-demo-video">Pause</button>
+      </div>
+      <p class="project-caption">
+        Explore the interactive demo: <a href="./reviser_examples_300m.html">300M</a> &middot;
+        <a href="./reviser_examples_100m.html">100M</a> &middot;
+        <a href="#reviser-project">Read about the project &darr;</a>
+      </p>
+    </section>
 
     <section class="section">
       <h2>About</h2>
@@ -436,7 +469,7 @@
     <section class="section">
       <h2>Projects</h2>
 
-      <article class="project">
+      <article class="project" id="reviser-project">
         <h3>Reviser</h3>
         <p class="meta">Solo research project · Dec 2025–May 2026</p>
         <p>
@@ -456,16 +489,6 @@
           ·
           <a href="https://huggingface.co/sean-diab/reviser-checkpoints" target="_blank" rel="noopener noreferrer">Checkpoints</a>
         </p>
-        <div class="project-media" id="reviser-demo-wrap">
-          <video id="reviser-demo-video" preload="auto" muted playsinline>
-            <source src="./reviser_edit_demo.mp4" type="video/mp4" />
-          </video>
-        </div>
-        <div class="gif-controls">
-          <button type="button" id="reviser-toggle">Pause</button>
-        </div>
-        <p class="project-caption">Editing trajectory demo from a real Reviser response: the canvas is incrementally revised via cursor actions.</p>
-        <p class="project-caption">Interactive trajectory explorer: <a href="./reviser_examples_300m.html">300M</a> &middot; <a href="./reviser_examples_100m.html">100M</a> &mdash; play, scrub, and step through real generations.</p>
       </article>
 
       <article class="project">
