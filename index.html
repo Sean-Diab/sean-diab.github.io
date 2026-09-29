@@ -426,7 +426,8 @@
         </div>
         <figcaption class="project-caption" id="reviser-demo-caption">
           <strong>A language model that edits as it writes.</strong> Watch Reviser move its cursor and insert text
-          throughout a response, rather than only adding words at the end.
+          throughout a response, rather than only adding words at the end. Red text shows earlier insertions; yellow
+          highlights the insertion being made in the current step.
         </figcaption>
       </figure>
       <div class="gif-controls">
@@ -638,13 +639,11 @@
       var toggleBtn = document.getElementById('reviser-toggle');
       if (!video || !toggleBtn) return;
 
-      var savedTime = 0;
       var restartTimer = null;
       var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
       video.addEventListener('ended', function () {
         if (reduceMotion) return;
-        savedTime = 0;
         restartTimer = setTimeout(function () {
           restartTimer = null;
           video.currentTime = 0;
@@ -666,11 +665,10 @@
           return;
         }
         if (video.paused) {
-          video.currentTime = savedTime;
+          if (video.ended) video.currentTime = 0;
           video.play();
           toggleBtn.textContent = 'Pause';
         } else {
-          savedTime = video.currentTime;
           video.pause();
           toggleBtn.textContent = 'Play';
         }
