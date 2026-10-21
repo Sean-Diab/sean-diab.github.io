@@ -1,0 +1,1944 @@
+{
+ "project": {
+  "name": "Reviser",
+  "tagline": "A language model that writes and edits text by moving a cursor",
+  "summary": "Reviser is a small decoder-only Transformer (100M and 300M parameters) that produces text as a sequence of cursor actions: insert a token, move the cursor, delete the token before it (backspace), or stop. It can leave a gap and come back to fill it, fix a typo it just made, or edit an existing draft in place instead of retyping it. Each action costs the same as one step of an ordinary language model. Trained on English web text (FineWeb) and public edit corpora (CoEdIT, IteraTeR), the editing model beats a same-size rewriter trained on the same data on the CoEdIT benchmark while taking about a third of the decoding steps.",
+  "highlights": [
+   {
+    "label": "CoEdIT SARI vs. same-size AR rewriter",
+    "value": "+7.2 (100M), +4.5 (300M)"
+   },
+   {
+    "label": "Decoding steps for editing",
+    "value": "about 1/3 of the rewriter's"
+   },
+   {
+    "label": "Win rate vs. diffusion LMs of similar size",
+    "value": "62-74%"
+   },
+   {
+    "label": "Backspaces a just-typed repeated token",
+    "value": "85-87% of the time"
+   },
+   {
+    "label": "Model sizes",
+    "value": "100M and 300M parameters"
+   }
+  ],
+  "how_it_works": [
+   "The text lives on a canvas with a cursor. The model reads the prompt (or the draft and an instruction) and every action it has taken so far.",
+   "At each step it outputs one action: insert a token at the cursor, move the cursor left or right by some number of tokens, backspace, or stop.",
+   "A fixed program applies the action to the canvas, and the loop repeats until the model stops.",
+   "Because it predicts one action at a time, each step costs the same as one step of a normal language model; an edit takes a few actions instead of rewriting the whole text.",
+   "It learns from synthetic writing orders (including typing a wrong token and backspacing it) and from edit trajectories built from before/after pairs; the writing models are then tuned with reinforcement learning."
+  ]
+ },
+ "examples": [
+  {
+   "id": "edit-300m-plurals",
+   "title": "Three grammar fixes, back to front",
+   "model": "Reviser-Edit 300M",
+   "why": "Starts at the end of the sentence and jumps back to each error (choice, sale, offered), fixing all three in 14 actions and matching the human reference exactly; the AR rewriter retyped all 27 tokens and missed one.",
+   "steps": [
+    {
+     "text": "It offered recommendations for various stores, fashion matching, favorite competitive products, special sale of new arrivals, editor's choice, and more.",
+     "cursor": 152,
+     "note": "The input sentence, with the cursor at its end."
+    },
+    {
+     "text": "It offered recommendations for various stores, fashion matching, favorite competitive products, special sale of new arrivals, editor's choice, and more.",
+     "cursor": 141,
+     "note": "move the cursor 4 tokens left"
+    },
+    {
+     "text": "It offered recommendations for various stores, fashion matching, favorite competitive products, special sale of new arrivals, editor's, and more.",
+     "cursor": 134,
+     "note": "backspace (delete \" choice\")"
+    },
+    {
+     "text": "It offered recommendations for various stores, fashion matching, favorite competitive products, special sale of new arrivals, editor's choices, and more.",
+     "cursor": 142,
+     "note": "insert \" choices\""
+    },
+    {
+     "text": "It offered recommendations for various stores, fashion matching, favorite competitive products, special sale of new arrivals, editor's choices, and more.",
+     "cursor": 124,
+     "note": "move the cursor 4 tokens left"
+    },
+    {
+     "text": "It offered recommendations for various stores, fashion matching, favorite competitive products, special sale of new arrivals, editor's choices, and more.",
+     "cursor": 111,
+     "note": "move the cursor 2 tokens left"
+    },
+    {
+     "text": "It offered recommendations for various stores, fashion matching, favorite competitive products, special sale of new arrivals, editor's choices, and more.",
+     "cursor": 108,
+     "note": "move the cursor 1 token left"
+    },
+    {
+     "text": "It offered recommendations for various stores, fashion matching, favorite competitive products, special of new arrivals, editor's choices, and more.",
+     "cursor": 103,
+     "note": "backspace (delete \" sale\")"
+    },
+    {
+     "text": "It offered recommendations for various stores, fashion matching, favorite competitive products, special sales of new arrivals, editor's choices, and more.",
+     "cursor": 109,
+     "note": "insert \" sales\""
+    },
+    {
+     "text": "It offered recommendations for various stores, fashion matching, favorite competitive products, special sales of new arrivals, editor's choices, and more.",
+     "cursor": 54,
+     "note": "move the cursor 8 tokens left"
+    },
+    {
+     "text": "It offered recommendations for various stores, fashion matching, favorite competitive products, special sales of new arrivals, editor's choices, and more.",
+     "cursor": 30,
+     "note": "move the cursor 4 tokens left"
+    },
+    {
+     "text": "It offered recommendations for various stores, fashion matching, favorite competitive products, special sales of new arrivals, editor's choices, and more.",
+     "cursor": 10,
+     "note": "move the cursor 2 tokens left"
+    },
+    {
+     "text": "It recommendations for various stores, fashion matching, favorite competitive products, special sales of new arrivals, editor's choices, and more.",
+     "cursor": 2,
+     "note": "backspace (delete \" offered\")"
+    },
+    {
+     "text": "It offers recommendations for various stores, fashion matching, favorite competitive products, special sales of new arrivals, editor's choices, and more.",
+     "cursor": 9,
+     "note": "insert \" offers\""
+    },
+    {
+     "text": "It offers recommendations for various stores, fashion matching, favorite competitive products, special sales of new arrivals, editor's choices, and more.",
+     "cursor": 9,
+     "note": "stop"
+    }
+   ],
+   "counts": {
+    "actions": 14,
+    "inserts": 3,
+    "moves": 7,
+    "backspaces": 3
+   },
+   "prompt": "Fix grammar: It offered recommendations for various stores, fashion matching, favorite competitive products, special sale of new arrivals, editor's choice, and more.",
+   "reference": "It offers recommendations for various stores, fashion matching, favorite competitive products, special sales of new arrivals, editor's choices, and more.",
+   "compare": {
+    "label": "AR rewriter 300M",
+    "text": "It offers recommendations for various stores, fashion matching, favorite competitive products, special sales of new arrivals, editor's choice, and more.",
+    "note": "Same size, same training data, but writes the whole output from scratch, left to right. SARI vs. the human reference: AR rewriter 90.2, Reviser-Edit 100.0 (higher is better)."
+   }
+  },
+  {
+   "id": "edit-100m-only",
+   "title": "Moving one word",
+   "model": "Reviser-Edit 100M",
+   "why": "Clarifies the sentence by deleting \"only\" and retyping it one word earlier, plus removing a double space: an exact match in 11 actions. The AR rewriter dropped \"only\", which changes the meaning.",
+   "steps": [
+    {
+     "text": "By 2008  the factory at Palmela will be only producing the multi-purpose vehicle Sharan and the Eos models.",
+     "cursor": 107,
+     "note": "The input sentence, with the cursor at its end."
+    },
+    {
+     "text": "By 2008  the factory at Palmela will be only producing the multi-purpose vehicle Sharan and the Eos models.",
+     "cursor": 80,
+     "note": "move the cursor 8 tokens left"
+    },
+    {
+     "text": "By 2008  the factory at Palmela will be only producing the multi-purpose vehicle Sharan and the Eos models.",
+     "cursor": 58,
+     "note": "move the cursor 4 tokens left"
+    },
+    {
+     "text": "By 2008  the factory at Palmela will be only producing the multi-purpose vehicle Sharan and the Eos models.",
+     "cursor": 44,
+     "note": "move the cursor 2 tokens left"
+    },
+    {
+     "text": "By 2008  the factory at Palmela will be producing the multi-purpose vehicle Sharan and the Eos models.",
+     "cursor": 39,
+     "note": "backspace (delete \" only\")"
+    },
+    {
+     "text": "By 2008  the factory at Palmela will be producing the multi-purpose vehicle Sharan and the Eos models.",
+     "cursor": 36,
+     "note": "move the cursor 1 token left"
+    },
+    {
+     "text": "By 2008  the factory at Palmela will only be producing the multi-purpose vehicle Sharan and the Eos models.",
+     "cursor": 41,
+     "note": "insert \" only\""
+    },
+    {
+     "text": "By 2008  the factory at Palmela will only be producing the multi-purpose vehicle Sharan and the Eos models.",
+     "cursor": 23,
+     "note": "move the cursor 4 tokens left"
+    },
+    {
+     "text": "By 2008  the factory at Palmela will only be producing the multi-purpose vehicle Sharan and the Eos models.",
+     "cursor": 12,
+     "note": "move the cursor 2 tokens left"
+    },
+    {
+     "text": "By 2008  the factory at Palmela will only be producing the multi-purpose vehicle Sharan and the Eos models.",
+     "cursor": 8,
+     "note": "move the cursor 1 token left"
+    },
+    {
+     "text": "By 2008 the factory at Palmela will only be producing the multi-purpose vehicle Sharan and the Eos models.",
+     "cursor": 7,
+     "note": "backspace (delete \" \")"
+    },
+    {
+     "text": "By 2008 the factory at Palmela will only be producing the multi-purpose vehicle Sharan and the Eos models.",
+     "cursor": 7,
+     "note": "stop"
+    }
+   ],
+   "counts": {
+    "actions": 11,
+    "inserts": 1,
+    "moves": 7,
+    "backspaces": 2
+   },
+   "prompt": "Make this text clearer: By 2008  the factory at Palmela will be only producing the multi-purpose vehicle Sharan and the Eos models.",
+   "reference": "By 2008 the factory at Palmela will only be producing the multi-purpose vehicle Sharan and the Eos models.",
+   "compare": {
+    "label": "AR rewriter 100M",
+    "text": "By 2008 the factory at Palmela will be producing the multi-purpose vehicle Sharan and the Eos models.",
+    "note": "Same size, same training data, but writes the whole output from scratch, left to right. SARI vs. the human reference: AR rewriter 74.5, Reviser-Edit 100.0 (higher is better)."
+   }
+  },
+  {
+   "id": "edit-300m-puzzled",
+   "title": "Five fixes in one sentence",
+   "model": "Reviser-Edit 300M",
+   "why": "Fixes point/points, letting/let, faces/face, tried/trying and looks/look by jumping between them in 17 actions, leaving the rest of the sentence untouched.",
+   "steps": [
+    {
+     "text": "I'm sitting here with a stupid, puzzled looks on my faces tried to figure out how we letting Mo Williams score 52 point...",
+     "cursor": 122,
+     "note": "The input sentence, with the cursor at its end."
+    },
+    {
+     "text": "I'm sitting here with a stupid, puzzled looks on my faces tried to figure out how we letting Mo Williams score 52 point...",
+     "cursor": 119,
+     "note": "move the cursor 1 token left"
+    },
+    {
+     "text": "I'm sitting here with a stupid, puzzled looks on my faces tried to figure out how we letting Mo Williams score 52...",
+     "cursor": 113,
+     "note": "backspace (delete \" point\")"
+    },
+    {
+     "text": "I'm sitting here with a stupid, puzzled looks on my faces tried to figure out how we letting Mo Williams score 52 points...",
+     "cursor": 120,
+     "note": "insert \" points\""
+    },
+    {
+     "text": "I'm sitting here with a stupid, puzzled looks on my faces tried to figure out how we letting Mo Williams score 52 points...",
+     "cursor": 95,
+     "note": "move the cursor 4 tokens left"
+    },
+    {
+     "text": "I'm sitting here with a stupid, puzzled looks on my faces tried to figure out how we letting Mo Williams score 52 points...",
+     "cursor": 92,
+     "note": "move the cursor 1 token left"
+    },
+    {
+     "text": "I'm sitting here with a stupid, puzzled looks on my faces tried to figure out how we Mo Williams score 52 points...",
+     "cursor": 84,
+     "note": "backspace (delete \" letting\")"
+    },
+    {
+     "text": "I'm sitting here with a stupid, puzzled looks on my faces tried to figure out how we let Mo Williams score 52 points...",
+     "cursor": 88,
+     "note": "insert \" let\""
+    },
+    {
+     "text": "I'm sitting here with a stupid, puzzled looks on my faces tried to figure out how we let Mo Williams score 52 points...",
+     "cursor": 73,
+     "note": "move the cursor 4 tokens left"
+    },
+    {
+     "text": "I'm sitting here with a stupid, puzzled looks on my faces tried to figure out how we let Mo Williams score 52 points...",
+     "cursor": 63,
+     "note": "move the cursor 2 tokens left"
+    },
+    {
+     "text": "I'm sitting here with a stupid, puzzled looks on my faces to figure out how we let Mo Williams score 52 points...",
+     "cursor": 57,
+     "note": "backspace (delete \" tried\")"
+    },
+    {
+     "text": "I'm sitting here with a stupid, puzzled looks on my to figure out how we let Mo Williams score 52 points...",
+     "cursor": 51,
+     "note": "backspace (delete \" faces\")"
+    },
+    {
+     "text": "I'm sitting here with a stupid, puzzled looks on my face to figure out how we let Mo Williams score 52 points...",
+     "cursor": 56,
+     "note": "insert \" face\""
+    },
+    {
+     "text": "I'm sitting here with a stupid, puzzled looks on my face trying to figure out how we let Mo Williams score 52 points...",
+     "cursor": 63,
+     "note": "insert \" trying\""
+    },
+    {
+     "text": "I'm sitting here with a stupid, puzzled looks on my face trying to figure out how we let Mo Williams score 52 points...",
+     "cursor": 45,
+     "note": "move the cursor 4 tokens left"
+    },
+    {
+     "text": "I'm sitting here with a stupid, puzzled on my face trying to figure out how we let Mo Williams score 52 points...",
+     "cursor": 39,
+     "note": "backspace (delete \" looks\")"
+    },
+    {
+     "text": "I'm sitting here with a stupid, puzzled look on my face trying to figure out how we let Mo Williams score 52 points...",
+     "cursor": 44,
+     "note": "insert \" look\""
+    },
+    {
+     "text": "I'm sitting here with a stupid, puzzled look on my face trying to figure out how we let Mo Williams score 52 points...",
+     "cursor": 44,
+     "note": "stop"
+    }
+   ],
+   "counts": {
+    "actions": 17,
+    "inserts": 5,
+    "moves": 6,
+    "backspaces": 5
+   },
+   "prompt": "Fix grammatical mistakes in this sentence: I'm sitting here with a stupid, puzzled looks on my faces tried to figure out how we letting Mo Williams score 52 point...",
+   "reference": "I'm sitting here with a stupid, puzzled look on my face trying to figure out how we let Mo Williams score 52 points.",
+   "compare": {
+    "label": "AR rewriter 300M",
+    "text": "I'm sitting here with a stupid, puzzled look on my face trying to figure out how we let Mo Williams score 52 points...",
+    "note": "Same size, same training data, but writes the whole output from scratch, left to right. SARI vs. the human reference: AR rewriter 98.3, Reviser-Edit 98.3 (higher is better)."
+   }
+  },
+  {
+   "id": "write-300m-wine",
+   "title": "Writing out of order",
+   "model": "Reviser 300M (run-and-jump + Delete + RL)",
+   "why": "While continuing a prompt, the model leaves gaps and jumps back (up to 32 tokens at a time) to insert clauses into text it already wrote (24 cursor moves, 3 backspaces in 157 actions).",
+   "steps": [
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (",
+     "cursor": 142,
+     "note": "The prompt (35 tokens, locked: the model cannot change it), with the cursor at its end."
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and",
+     "cursor": 145,
+     "note": "insert \"and\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still",
+     "cursor": 151,
+     "note": "insert \" still\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very",
+     "cursor": 156,
+     "note": "insert \" very\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular",
+     "cursor": 164,
+     "note": "insert \" popular\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular)",
+     "cursor": 165,
+     "note": "insert \")\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant",
+     "cursor": 176,
+     "note": "insert \" restaurant\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.",
+     "cursor": 177,
+     "note": "insert \".\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\n",
+     "cursor": 178,
+     "note": "insert \"\\n\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs",
+     "cursor": 180,
+     "note": "insert \"As\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected",
+     "cursor": 189,
+     "note": "insert \" expected\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected,",
+     "cursor": 190,
+     "note": "insert \",\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there",
+     "cursor": 196,
+     "note": "insert \" there\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there.",
+     "cursor": 197,
+     "note": "insert \".\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there.",
+     "cursor": 196,
+     "note": "move the cursor 1 token left"
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were.",
+     "cursor": 201,
+     "note": "insert \" were\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great.",
+     "cursor": 207,
+     "note": "insert \" great\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food.",
+     "cursor": 212,
+     "note": "insert \" food\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food,.",
+     "cursor": 213,
+     "note": "insert \",\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great.",
+     "cursor": 219,
+     "note": "insert \" great\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great The.",
+     "cursor": 223,
+     "note": "insert \" The\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great The staff.",
+     "cursor": 229,
+     "note": "insert \" staff\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great The staff and.",
+     "cursor": 233,
+     "note": "insert \" and\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great The staff and staff.",
+     "cursor": 239,
+     "note": "insert \" staff\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great The staff and.",
+     "cursor": 233,
+     "note": "backspace (delete \" staff\")"
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great The staff and service.",
+     "cursor": 241,
+     "note": "insert \" service\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great The staff and service were.",
+     "cursor": 246,
+     "note": "insert \" were\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great The staff and service were extremely.",
+     "cursor": 256,
+     "note": "insert \" extremely\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great The staff and service were extremely and.",
+     "cursor": 260,
+     "note": "insert \" and\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great The staff and service were extremely.",
+     "cursor": 256,
+     "note": "backspace (delete \" and\")"
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great The staff and service were extremely friendly.",
+     "cursor": 265,
+     "note": "insert \" friendly\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great The staff and service were extremely friendly and.",
+     "cursor": 269,
+     "note": "insert \" and\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great The staff and service were extremely friendly and welcoming.",
+     "cursor": 279,
+     "note": "insert \" welcoming\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great The staff and service were extremely friendly and welcoming,.",
+     "cursor": 280,
+     "note": "insert \",\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great The staff and service were extremely friendly and welcoming,..",
+     "cursor": 281,
+     "note": "insert \".\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great The staff and service were extremely friendly and welcoming,. The.",
+     "cursor": 285,
+     "note": "insert \" The\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great The staff and service were extremely friendly and welcoming,. The atmosphere.",
+     "cursor": 296,
+     "note": "insert \" atmosphere\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great The staff and service were extremely friendly and welcoming,. The atmosphere was.",
+     "cursor": 300,
+     "note": "insert \" was\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great The staff and service were extremely friendly and welcoming,. The atmosphere was,.",
+     "cursor": 301,
+     "note": "insert \",\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great The staff and service were extremely friendly and welcoming,. The atmosphere was.",
+     "cursor": 300,
+     "note": "backspace (delete \",\")"
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great The staff and service were extremely friendly and welcoming,. The atmosphere was warm.",
+     "cursor": 305,
+     "note": "insert \" warm\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great The staff and service were extremely friendly and welcoming,. The atmosphere was warm and.",
+     "cursor": 309,
+     "note": "insert \" and\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great The staff and service were extremely friendly and welcoming,. The atmosphere was warm and welcoming.",
+     "cursor": 319,
+     "note": "insert \" welcoming\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great The staff and service were extremely friendly and welcoming,. The atmosphere was warm and welcoming,.",
+     "cursor": 320,
+     "note": "insert \",\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great The staff and service were extremely friendly and welcoming,. The atmosphere was warm and welcoming, with.",
+     "cursor": 325,
+     "note": "insert \" with\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great The staff and service were extremely friendly and welcoming,. The atmosphere was warm and welcoming, with a.",
+     "cursor": 327,
+     "note": "insert \" a\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great The staff and service were extremely friendly and welcoming,. The atmosphere was warm and welcoming, with a few.",
+     "cursor": 331,
+     "note": "insert \" few\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great The staff and service were extremely friendly and welcoming,. The atmosphere was warm and welcoming, with a few of.",
+     "cursor": 334,
+     "note": "insert \" of\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great The staff and service were extremely friendly and welcoming,. The atmosphere was warm and welcoming, with a few of the.",
+     "cursor": 338,
+     "note": "insert \" the\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great The staff and service were extremely friendly and welcoming,. The atmosphere was warm and welcoming, with a few of the staff.",
+     "cursor": 344,
+     "note": "insert \" staff\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great The staff and service were extremely friendly and welcoming,. The atmosphere was warm and welcoming, with a few of the staff making.",
+     "cursor": 351,
+     "note": "insert \" making\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great The staff and service were extremely friendly and welcoming,. The atmosphere was warm and welcoming, with a few of the staff making\n.",
+     "cursor": 352,
+     "note": "insert \"\\n\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great The staff and service were extremely friendly and welcoming,. The atmosphere was warm and welcoming, with a few of the staff making\nAll.",
+     "cursor": 355,
+     "note": "insert \"All\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great The staff and service were extremely friendly and welcoming,. The atmosphere was warm and welcoming, with a few of the staff making\nAll in.",
+     "cursor": 358,
+     "note": "insert \" in\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great The staff and service were extremely friendly and welcoming,. The atmosphere was warm and welcoming, with a few of the staff making\nAll in all.",
+     "cursor": 362,
+     "note": "insert \" all\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great The staff and service were extremely friendly and welcoming,. The atmosphere was warm and welcoming, with a few of the staff making\nAll in all a.",
+     "cursor": 364,
+     "note": "insert \" a\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great The staff and service were extremely friendly and welcoming,. The atmosphere was warm and welcoming, with a few of the staff making\nAll in all a great.",
+     "cursor": 370,
+     "note": "insert \" great\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great The staff and service were extremely friendly and welcoming,. The atmosphere was warm and welcoming, with a few of the staff making\nAll in all a great experience.",
+     "cursor": 381,
+     "note": "insert \" experience\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great The staff and service were extremely friendly and welcoming,. The atmosphere was warm and welcoming, with a few of the staff making\nAll in all a great experience.",
+     "cursor": 309,
+     "note": "move the cursor 16 tokens left"
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great The staff and service were extremely friendly and welcoming,. The atmosphere was warm and welcoming, with a few of the staff making\nAll in all a great experience.",
+     "cursor": 285,
+     "note": "move the cursor 4 tokens left"
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great The staff and service were extremely friendly and welcoming,. The atmosphere was warm and welcoming, with a few of the staff making\nAll in all a great experience.",
+     "cursor": 280,
+     "note": "move the cursor 2 tokens left"
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great The staff and service were extremely friendly and welcoming, and. The atmosphere was warm and welcoming, with a few of the staff making\nAll in all a great experience.",
+     "cursor": 284,
+     "note": "insert \" and\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great The staff and service were extremely friendly and welcoming, and there. The atmosphere was warm and welcoming, with a few of the staff making\nAll in all a great experience.",
+     "cursor": 290,
+     "note": "insert \" there\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great The staff and service were extremely friendly and welcoming, and there was. The atmosphere was warm and welcoming, with a few of the staff making\nAll in all a great experience.",
+     "cursor": 294,
+     "note": "insert \" was\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great The staff and service were extremely friendly and welcoming, and there was a. The atmosphere was warm and welcoming, with a few of the staff making\nAll in all a great experience.",
+     "cursor": 296,
+     "note": "insert \" a\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great The staff and service were extremely friendly and welcoming, and there was a nice. The atmosphere was warm and welcoming, with a few of the staff making\nAll in all a great experience.",
+     "cursor": 301,
+     "note": "insert \" nice\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great The staff and service were extremely friendly and welcoming, and there was a nice mix. The atmosphere was warm and welcoming, with a few of the staff making\nAll in all a great experience.",
+     "cursor": 305,
+     "note": "insert \" mix\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great The staff and service were extremely friendly and welcoming, and there was a nice mix of. The atmosphere was warm and welcoming, with a few of the staff making\nAll in all a great experience.",
+     "cursor": 308,
+     "note": "insert \" of\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great The staff and service were extremely friendly and welcoming, and there was a nice mix of food. The atmosphere was warm and welcoming, with a few of the staff making\nAll in all a great experience.",
+     "cursor": 313,
+     "note": "insert \" food\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great The staff and service were extremely friendly and welcoming, and there was a nice mix of food and. The atmosphere was warm and welcoming, with a few of the staff making\nAll in all a great experience.",
+     "cursor": 317,
+     "note": "insert \" and\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making\nAll in all a great experience.",
+     "cursor": 322,
+     "note": "insert \" wine\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making\nAll in all a great experience.",
+     "cursor": 241,
+     "note": "move the cursor 16 tokens left"
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making\nAll in all a great experience.",
+     "cursor": 219,
+     "note": "move the cursor 4 tokens left"
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great drinks The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making\nAll in all a great experience.",
+     "cursor": 226,
+     "note": "insert \" drinks\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great drinks and The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making\nAll in all a great experience.",
+     "cursor": 230,
+     "note": "insert \" and\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great drinks and. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making\nAll in all a great experience.",
+     "cursor": 231,
+     "note": "insert \".\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great drinks and. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making\nAll in all a great experience.",
+     "cursor": 230,
+     "note": "move the cursor 1 token left"
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great drinks and good. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making\nAll in all a great experience.",
+     "cursor": 235,
+     "note": "insert \" good\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making\nAll in all a great experience.",
+     "cursor": 240,
+     "note": "insert \" wine\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making\nAll in all a great experience.",
+     "cursor": 395,
+     "note": "move the cursor 32 tokens right"
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making\nAll in all a great experience.",
+     "cursor": 415,
+     "note": "move the cursor 4 tokens right"
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some\nAll in all a great experience.",
+     "cursor": 420,
+     "note": "insert \" some\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent\nAll in all a great experience.",
+     "cursor": 430,
+     "note": "insert \" excellent\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent.\nAll in all a great experience.",
+     "cursor": 431,
+     "note": "insert \".\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent.\nAll in all a great experience.",
+     "cursor": 430,
+     "note": "move the cursor 1 token left"
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 442,
+     "note": "insert \" connections\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 278,
+     "note": "move the cursor 32 tokens left"
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 196,
+     "note": "move the cursor 16 tokens left"
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 178,
+     "note": "move the cursor 4 tokens left"
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 176,
+     "note": "move the cursor 2 tokens left"
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 179,
+     "note": "insert \" in\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 183,
+     "note": "insert \" the\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 190,
+     "note": "insert \" region\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region,.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 191,
+     "note": "insert \",\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, was.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 195,
+     "note": "insert \" was\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, was a.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 197,
+     "note": "insert \" a\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, was a great.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 203,
+     "note": "insert \" great\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, was a great day.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 207,
+     "note": "insert \" day\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, was a great day out.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 211,
+     "note": "insert \" out\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, was a great day out,.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 212,
+     "note": "insert \",\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, was a great day out, but.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 216,
+     "note": "insert \" but\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, was a great day out, but.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 203,
+     "note": "move the cursor 4 tokens left"
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, was a great day out, but.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 195,
+     "note": "move the cursor 2 tokens left"
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, was a great day out, but.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 191,
+     "note": "move the cursor 1 token left"
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, where was a great day out, but.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 197,
+     "note": "insert \" where\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, where the was a great day out, but.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 201,
+     "note": "insert \" the\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, where the wine was a great day out, but.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 206,
+     "note": "insert \" wine\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, where the wine was was a great day out, but.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 210,
+     "note": "insert \" was\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, where the wine was served was a great day out, but.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 217,
+     "note": "insert \" served\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, where the wine was served. was a great day out, but.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 218,
+     "note": "insert \".\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, where the wine was served. It was a great day out, but.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 221,
+     "note": "insert \" It\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, where the wine was served. It was a great day out, but.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 237,
+     "note": "move the cursor 4 tokens right"
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, where the wine was served. It was a great day out, but.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 242,
+     "note": "move the cursor 2 tokens right"
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, where the wine was served. It was a great day out, but.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 246,
+     "note": "move the cursor 1 token right"
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, where the wine was served. It was a great day out, but it.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 249,
+     "note": "insert \" it\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, where the wine was served. It was a great day out, but it was.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 253,
+     "note": "insert \" was\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, where the wine was served. It was a great day out, but it was still.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 259,
+     "note": "insert \" still\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, where the wine was served. It was a great day out, but it was still a.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 261,
+     "note": "insert \" a\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, where the wine was served. It was a great day out, but it was still a little.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 268,
+     "note": "insert \" little\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, where the wine was served. It was a great day out, but it was still a little cold.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 273,
+     "note": "insert \" cold\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, where the wine was served. It was a great day out, but it was still a little cold we.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 276,
+     "note": "insert \" we\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, where the wine was served. It was a great day out, but it was still a little cold we left.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 281,
+     "note": "insert \" left\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, where the wine was served. It was a great day out, but it was still a little cold we left.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 273,
+     "note": "move the cursor 2 tokens left"
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, where the wine was served. It was a great day out, but it was still a little cold when we left.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 278,
+     "note": "insert \" when\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, where the wine was served. It was a great day out, but it was still a little cold when we left.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 286,
+     "note": "move the cursor 2 tokens right"
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, where the wine was served. It was a great day out, but it was still a little cold when we left,.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 287,
+     "note": "insert \",\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, where the wine was served. It was a great day out, but it was still a little cold when we left, so.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 290,
+     "note": "insert \" so\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, where the wine was served. It was a great day out, but it was still a little cold when we left, so we.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 293,
+     "note": "insert \" we\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, where the wine was served. It was a great day out, but it was still a little cold when we left, so we made.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 298,
+     "note": "insert \" made\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, where the wine was served. It was a great day out, but it was still a little cold when we left, so we made the.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 302,
+     "note": "insert \" the\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, where the wine was served. It was a great day out, but it was still a little cold when we left, so we made the transition.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 313,
+     "note": "insert \" transition\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, where the wine was served. It was a great day out, but it was still a little cold when we left, so we made the transition to.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 316,
+     "note": "insert \" to\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, where the wine was served. It was a great day out, but it was still a little cold when we left, so we made the transition to a.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 318,
+     "note": "insert \" a\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, where the wine was served. It was a great day out, but it was still a little cold when we left, so we made the transition to a nice.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 323,
+     "note": "insert \" nice\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, where the wine was served. It was a great day out, but it was still a little cold when we left, so we made the transition to a nice bar.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 327,
+     "note": "insert \" bar\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, where the wine was served. It was a great day out, but it was still a little cold when we left, so we made the transition to a nice bar for.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 331,
+     "note": "insert \" for\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, where the wine was served. It was a great day out, but it was still a little cold when we left, so we made the transition to a nice bar for a.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 333,
+     "note": "insert \" a\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, where the wine was served. It was a great day out, but it was still a little cold when we left, so we made the transition to a nice bar for a drink.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 339,
+     "note": "insert \" drink\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, where the wine was served. It was a great day out, but it was still a little cold when we left, so we made the transition to a nice bar for a drink..\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 340,
+     "note": "insert \".\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, where the wine was served. It was a great day out, but it was still a little cold when we left, so we made the transition to a nice bar for a drink. We.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 343,
+     "note": "insert \" We\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, where the wine was served. It was a great day out, but it was still a little cold when we left, so we made the transition to a nice bar for a drink. We were.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 348,
+     "note": "insert \" were\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, where the wine was served. It was a great day out, but it was still a little cold when we left, so we made the transition to a nice bar for a drink. We were soon.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 353,
+     "note": "insert \" soon\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, where the wine was served. It was a great day out, but it was still a little cold when we left, so we made the transition to a nice bar for a drink. We were soon treated.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 361,
+     "note": "insert \" treated\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, where the wine was served. It was a great day out, but it was still a little cold when we left, so we made the transition to a nice bar for a drink. We were soon treated to.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 364,
+     "note": "insert \" to\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, where the wine was served. It was a great day out, but it was still a little cold when we left, so we made the transition to a nice bar for a drink. We were soon treated to a.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 366,
+     "note": "insert \" a\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, where the wine was served. It was a great day out, but it was still a little cold when we left, so we made the transition to a nice bar for a drink. We were soon treated to a fantastic.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 376,
+     "note": "insert \" fantastic\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, where the wine was served. It was a great day out, but it was still a little cold when we left, so we made the transition to a nice bar for a drink. We were soon treated to a fantastic wine.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 381,
+     "note": "insert \" wine\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, where the wine was served. It was a great day out, but it was still a little cold when we left, so we made the transition to a nice bar for a drink. We were soon treated to a fantastic wine tasting.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 389,
+     "note": "insert \" tasting\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, where the wine was served. It was a great day out, but it was still a little cold when we left, so we made the transition to a nice bar for a drink. We were soon treated to a fantastic wine tasting and.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 393,
+     "note": "insert \" and\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, where the wine was served. It was a great day out, but it was still a little cold when we left, so we made the transition to a nice bar for a drink. We were soon treated to a fantastic wine tasting and a.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 395,
+     "note": "insert \" a\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, where the wine was served. It was a great day out, but it was still a little cold when we left, so we made the transition to a nice bar for a drink. We were soon treated to a fantastic wine tasting and a drink.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 401,
+     "note": "insert \" drink\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, where the wine was served. It was a great day out, but it was still a little cold when we left, so we made the transition to a nice bar for a drink. We were soon treated to a fantastic wine tasting and a drink.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 395,
+     "note": "move the cursor 1 token left"
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, where the wine was served. It was a great day out, but it was still a little cold when we left, so we made the transition to a nice bar for a drink. We were soon treated to a fantastic wine tasting and a lovely drink.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 402,
+     "note": "insert \" lovely\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, where the wine was served. It was a great day out, but it was still a little cold when we left, so we made the transition to a nice bar for a drink. We were soon treated to a fantastic wine tasting and a lovely drink.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 408,
+     "note": "move the cursor 1 token right"
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, where the wine was served. It was a great day out, but it was still a little cold when we left, so we made the transition to a nice bar for a drink. We were soon treated to a fantastic wine tasting and a lovely drink in.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 411,
+     "note": "insert \" in\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, where the wine was served. It was a great day out, but it was still a little cold when we left, so we made the transition to a nice bar for a drink. We were soon treated to a fantastic wine tasting and a lovely drink in the.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 415,
+     "note": "insert \" the\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, where the wine was served. It was a great day out, but it was still a little cold when we left, so we made the transition to a nice bar for a drink. We were soon treated to a fantastic wine tasting and a lovely drink in the evening.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 423,
+     "note": "insert \" evening\""
+    },
+    {
+     "text": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (and still very popular) restaurant in the region, where the wine was served. It was a great day out, but it was still a little cold when we left, so we made the transition to a nice bar for a drink. We were soon treated to a fantastic wine tasting and a lovely drink in the evening.\nAs expected, there were great food, great drinks and good wine. The staff and service were extremely friendly and welcoming, and there was a nice mix of food and wine. The atmosphere was warm and welcoming, with a few of the staff making some excellent connections.\nAll in all a great experience.",
+     "cursor": 423,
+     "note": "stop"
+    }
+   ],
+   "counts": {
+    "actions": 157,
+    "inserts": 129,
+    "moves": 24,
+    "backspaces": 3
+   },
+   "prompt": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (",
+   "locked_prefix_chars": 142
+  },
+  {
+   "id": "edit-100m-fatty-acids",
+   "title": "Grammar fix with a small model",
+   "model": "Reviser-Edit 100M",
+   "why": "The 100M model fixes has/have and being/be in place and adds an article, in 11 actions.",
+   "steps": [
+    {
+     "text": "Fatty acids found in breast milk has been found to being essential for infant's early cognitive development.",
+     "cursor": 108,
+     "note": "The input sentence, with the cursor at its end."
+    },
+    {
+     "text": "Fatty acids found in breast milk has been found to being essential for infant's early cognitive development.",
+     "cursor": 79,
+     "note": "move the cursor 4 tokens left"
+    },
+    {
+     "text": "Fatty acids found in breast milk has been found to being essential for infant's early cognitive development.",
+     "cursor": 70,
+     "note": "move the cursor 2 tokens left"
+    },
+    {
+     "text": "Fatty acids found in breast milk has been found to being essential for the infant's early cognitive development.",
+     "cursor": 74,
+     "note": "insert \" the\""
+    },
+    {
+     "text": "Fatty acids found in breast milk has been found to being essential for the infant's early cognitive development.",
+     "cursor": 66,
+     "note": "move the cursor 2 tokens left"
+    },
+    {
+     "text": "Fatty acids found in breast milk has been found to being essential for the infant's early cognitive development.",
+     "cursor": 56,
+     "note": "move the cursor 1 token left"
+    },
+    {
+     "text": "Fatty acids found in breast milk has been found to essential for the infant's early cognitive development.",
+     "cursor": 50,
+     "note": "backspace (delete \" being\")"
+    },
+    {
+     "text": "Fatty acids found in breast milk has been found to be essential for the infant's early cognitive development.",
+     "cursor": 53,
+     "note": "insert \" be\""
+    },
+    {
+     "text": "Fatty acids found in breast milk has been found to be essential for the infant's early cognitive development.",
+     "cursor": 36,
+     "note": "move the cursor 4 tokens left"
+    },
+    {
+     "text": "Fatty acids found in breast milk been found to be essential for the infant's early cognitive development.",
+     "cursor": 32,
+     "note": "backspace (delete \" has\")"
+    },
+    {
+     "text": "Fatty acids found in breast milk have been found to be essential for the infant's early cognitive development.",
+     "cursor": 37,
+     "note": "insert \" have\""
+    },
+    {
+     "text": "Fatty acids found in breast milk have been found to be essential for the infant's early cognitive development.",
+     "cursor": 37,
+     "note": "stop"
+    }
+   ],
+   "counts": {
+    "actions": 11,
+    "inserts": 3,
+    "moves": 5,
+    "backspaces": 2
+   },
+   "prompt": "Fix grammar in this sentence: Fatty acids found in breast milk has been found to being essential for infant's early cognitive development.",
+   "reference": "Fatty acids found in breast milk have been found to be essential for an infant's early cognitive development.",
+   "compare": {
+    "label": "AR rewriter 100M",
+    "text": "The fat acids found in breast milk have been found to be essential for infant's early cognitive development.",
+    "note": "Same size, same training data, but writes the whole output from scratch, left to right. SARI vs. the human reference: AR rewriter 77.2, Reviser-Edit 88.6 (higher is better)."
+   }
+  },
+  {
+   "id": "write-100m-contact",
+   "title": "Going back to finish a sentence",
+   "model": "Reviser 100M (run-and-jump + Delete + RL)",
+   "why": "Writes \"If, please contact our Customer Care.\", then goes back to add \"office for guidance\" and \"you wish to reach us\" (17 cursor moves, 4 backspaces in 142 actions).",
+   "steps": [
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with",
+     "cursor": 237,
+     "note": "The prompt (35 tokens, locked: the model cannot change it), with the cursor at its end."
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the",
+     "cursor": 241,
+     "note": "insert \" the\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality",
+     "cursor": 249,
+     "note": "insert \" quality\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management",
+     "cursor": 260,
+     "note": "insert \" management\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system",
+     "cursor": 267,
+     "note": "insert \" system\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided",
+     "cursor": 276,
+     "note": "insert \" provided\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by",
+     "cursor": 279,
+     "note": "insert \" by\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the",
+     "cursor": 283,
+     "note": "insert \" the\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company",
+     "cursor": 291,
+     "note": "insert \" Company\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.",
+     "cursor": 292,
+     "note": "insert \".\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\n",
+     "cursor": 293,
+     "note": "insert \"\\n\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf",
+     "cursor": 295,
+     "note": "insert \"If\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one",
+     "cursor": 299,
+     "note": "insert \" one\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is",
+     "cursor": 302,
+     "note": "insert \" is\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not",
+     "cursor": 306,
+     "note": "insert \" not\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied",
+     "cursor": 316,
+     "note": "insert \" satisfied\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from",
+     "cursor": 321,
+     "note": "insert \" from\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the",
+     "cursor": 325,
+     "note": "insert \" the\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality",
+     "cursor": 333,
+     "note": "insert \" quality\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality,",
+     "cursor": 334,
+     "note": "insert \",\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it",
+     "cursor": 337,
+     "note": "insert \" it\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes",
+     "cursor": 345,
+     "note": "insert \" becomes\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the",
+     "cursor": 349,
+     "note": "insert \" the\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility",
+     "cursor": 364,
+     "note": "insert \" responsibility\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of",
+     "cursor": 367,
+     "note": "insert \" of\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the",
+     "cursor": 371,
+     "note": "insert \" the\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the.",
+     "cursor": 372,
+     "note": "insert \".\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We",
+     "cursor": 375,
+     "note": "insert \" We\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take",
+     "cursor": 380,
+     "note": "insert \" take\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent",
+     "cursor": 390,
+     "note": "insert \" excellent\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care",
+     "cursor": 395,
+     "note": "insert \" care\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care that",
+     "cursor": 400,
+     "note": "insert \" that\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care that you",
+     "cursor": 404,
+     "note": "insert \" you\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care that you can",
+     "cursor": 408,
+     "note": "insert \" can\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care that you can make",
+     "cursor": 413,
+     "note": "insert \" make\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care that you can make sure",
+     "cursor": 418,
+     "note": "insert \" sure\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care that you can make sure that",
+     "cursor": 423,
+     "note": "insert \" that\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care that you can make sure that you",
+     "cursor": 427,
+     "note": "insert \" you\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care that you can make sure that you are",
+     "cursor": 431,
+     "note": "insert \" are\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care that you can make sure that you are satisfied",
+     "cursor": 441,
+     "note": "insert \" satisfied\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care that you can make sure that you are satisfied.",
+     "cursor": 442,
+     "note": "insert \".\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care that you can make sure that you are satisfied.\n",
+     "cursor": 443,
+     "note": "insert \"\\n\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care that you can make sure that you are satisfied.\nIf",
+     "cursor": 445,
+     "note": "insert \"If\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care that you can make sure that you are satisfied.\nIf,",
+     "cursor": 446,
+     "note": "insert \",\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care that you can make sure that you are satisfied.\nIf, please",
+     "cursor": 453,
+     "note": "insert \" please\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care that you can make sure that you are satisfied.\nIf, please contact",
+     "cursor": 461,
+     "note": "insert \" contact\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care that you can make sure that you are satisfied.\nIf, please contact our",
+     "cursor": 465,
+     "note": "insert \" our\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care that you can make sure that you are satisfied.\nIf, please contact our.",
+     "cursor": 466,
+     "note": "insert \".\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care that you can make sure that you are satisfied.\nIf, please contact our",
+     "cursor": 465,
+     "note": "backspace (delete \".\")"
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care that you can make sure that you are satisfied.\nIf, please contact our Customer",
+     "cursor": 474,
+     "note": "insert \" Customer\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care that you can make sure that you are satisfied.\nIf, please contact our Customer Care",
+     "cursor": 479,
+     "note": "insert \" Care\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care that you can make sure that you are satisfied.\nIf, please contact our Customer Care.",
+     "cursor": 480,
+     "note": "insert \".\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care that you can make sure that you are satisfied.\nIf, please contact our Customer Care.",
+     "cursor": 479,
+     "note": "move the cursor 1 token left"
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care that you can make sure that you are satisfied.\nIf, please contact our Customer Care office.",
+     "cursor": 486,
+     "note": "insert \" office\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care that you can make sure that you are satisfied.\nIf, please contact our Customer Care office for.",
+     "cursor": 490,
+     "note": "insert \" for\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care that you can make sure that you are satisfied.\nIf, please contact our Customer Care office for guidance.",
+     "cursor": 499,
+     "note": "insert \" guidance\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care that you can make sure that you are satisfied.\nIf, please contact our Customer Care office for guidance.",
+     "cursor": 446,
+     "note": "move the cursor 8 tokens left"
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care that you can make sure that you are satisfied.\nIf, please contact our Customer Care office for guidance.",
+     "cursor": 445,
+     "note": "move the cursor 1 token left"
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care that you can make sure that you are satisfied.\nIf you, please contact our Customer Care office for guidance.",
+     "cursor": 449,
+     "note": "insert \" you\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care that you can make sure that you are satisfied.\nIf you wish, please contact our Customer Care office for guidance.",
+     "cursor": 454,
+     "note": "insert \" wish\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care that you can make sure that you are satisfied.\nIf you wish to, please contact our Customer Care office for guidance.",
+     "cursor": 457,
+     "note": "insert \" to\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care that you can make sure that you are satisfied.\nIf you wish to reach, please contact our Customer Care office for guidance.",
+     "cursor": 463,
+     "note": "insert \" reach\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 466,
+     "note": "insert \" us\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 400,
+     "note": "move the cursor 16 tokens left"
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 395,
+     "note": "move the cursor 1 token left"
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care in that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 398,
+     "note": "insert \" in\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care in the that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 402,
+     "note": "insert \" the\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care in the preparation that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 414,
+     "note": "insert \" preparation\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care in the preparation of that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 417,
+     "note": "insert \" of\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care in the preparation of such that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 422,
+     "note": "insert \" such\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care in the preparation of such documents that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 432,
+     "note": "insert \" documents\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care in the preparation of such documents. that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 433,
+     "note": "insert \".\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care in the preparation of such documents. If that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 436,
+     "note": "insert \" If\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care in the preparation of such documents. If we that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 439,
+     "note": "insert \" we\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care in the preparation of such documents. If we believe that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 447,
+     "note": "insert \" believe\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care in the preparation of such documents. If we believe you that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 451,
+     "note": "insert \" you\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care in the preparation of such documents. If we believe you have that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 456,
+     "note": "insert \" have\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care in the preparation of such documents. If we believe you have not that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 460,
+     "note": "insert \" not\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care in the preparation of such documents. If we believe you have not the that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 464,
+     "note": "insert \" the\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care in the preparation of such documents. If we believe you have not that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 460,
+     "note": "backspace (delete \" the\")"
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care in the preparation of such documents. If we believe you have not addressed that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 470,
+     "note": "insert \" addressed\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care in the preparation of such documents. If we believe you have not addressed the that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 474,
+     "note": "insert \" the\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 482,
+     "note": "insert \" problem\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 483,
+     "note": "insert \",\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 486,
+     "note": "insert \" we\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 491,
+     "note": "insert \" will\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will give that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 496,
+     "note": "insert \" give\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will give to that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 499,
+     "note": "insert \" to\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will give that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 496,
+     "note": "backspace (delete \" to\")"
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will give you that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 500,
+     "note": "insert \" you\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will give you the that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 504,
+     "note": "insert \" the\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will give you the right that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 510,
+     "note": "insert \" right\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will give you the right to that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 513,
+     "note": "insert \" to\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will give you the right to keep that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 518,
+     "note": "insert \" keep\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will give you the right to keep accurate that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 527,
+     "note": "insert \" accurate\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will give you the right to keep accurate, that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 528,
+     "note": "insert \",\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will give you the right to keep accurate, accurate that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 537,
+     "note": "insert \" accurate\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will give you the right to keep accurate, accurate information that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 549,
+     "note": "insert \" information\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will give you the right to keep accurate, accurate information about that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 555,
+     "note": "insert \" about\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will give you the right to keep accurate, accurate information about the that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 559,
+     "note": "insert \" the\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will give you the right to keep accurate, accurate information about the. that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 560,
+     "note": "insert \".\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will give you the right to keep accurate, accurate information about the.\n that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 561,
+     "note": "insert \"\\n\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will give you the right to keep accurate, accurate information about the.\nWe that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 563,
+     "note": "insert \"We\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will give you the right to keep accurate, accurate information about the.\nWe hope that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 568,
+     "note": "insert \" hope\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will give you the right to keep accurate, accurate information about the.\nWe hope that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 559,
+     "note": "move the cursor 4 tokens left"
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will give you the right to keep accurate, accurate information about the company.\nWe hope that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 567,
+     "note": "insert \" company\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will give you the right to keep accurate, accurate information about the company.\nWe hope that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 537,
+     "note": "move the cursor 4 tokens left"
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will give you the right to keep accurate, accurate information about the company.\nWe hope that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 527,
+     "note": "move the cursor 2 tokens left"
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will give you the right to keep accurate, accurate information about the company.\nWe hope that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 518,
+     "note": "move the cursor 1 token left"
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will give you the right to keep our accurate, accurate information about the company.\nWe hope that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 522,
+     "note": "insert \" our\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will give you the right to keep our website accurate, accurate information about the company.\nWe hope that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 530,
+     "note": "insert \" website\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will give you the right to keep our website updated accurate, accurate information about the company.\nWe hope that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 538,
+     "note": "insert \" updated\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will give you the right to keep our website updated with accurate, accurate information about the company.\nWe hope that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 543,
+     "note": "insert \" with\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will give you the right to keep our website updated with accurate, accurate information about the company.\nWe hope that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 375,
+     "note": "move the cursor 32 tokens left"
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will give you the right to keep our website updated with accurate, accurate information about the company.\nWe hope that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 371,
+     "note": "move the cursor 2 tokens left"
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the customer. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will give you the right to keep our website updated with accurate, accurate information about the company.\nWe hope that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 380,
+     "note": "insert \" customer\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the customer to. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will give you the right to keep our website updated with accurate, accurate information about the company.\nWe hope that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 383,
+     "note": "insert \" to\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the customer to be. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will give you the right to keep our website updated with accurate, accurate information about the company.\nWe hope that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 386,
+     "note": "insert \" be\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the customer to be responsible. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will give you the right to keep our website updated with accurate, accurate information about the company.\nWe hope that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 398,
+     "note": "insert \" responsible\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the customer to be responsible for. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will give you the right to keep our website updated with accurate, accurate information about the company.\nWe hope that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 402,
+     "note": "insert \" for\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the customer to be responsible for the. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will give you the right to keep our website updated with accurate, accurate information about the company.\nWe hope that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 406,
+     "note": "insert \" the\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the customer to be responsible for the accuracy. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will give you the right to keep our website updated with accurate, accurate information about the company.\nWe hope that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 415,
+     "note": "insert \" accuracy\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the customer to be responsible for the accuracy of. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will give you the right to keep our website updated with accurate, accurate information about the company.\nWe hope that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 418,
+     "note": "insert \" of\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the customer to be responsible for the accuracy of the. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will give you the right to keep our website updated with accurate, accurate information about the company.\nWe hope that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 422,
+     "note": "insert \" the\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the customer to be responsible for the accuracy of the information. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will give you the right to keep our website updated with accurate, accurate information about the company.\nWe hope that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 434,
+     "note": "insert \" information\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the customer to be responsible for the accuracy of the information offered. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will give you the right to keep our website updated with accurate, accurate information about the company.\nWe hope that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 442,
+     "note": "insert \" offered\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the customer to be responsible for the accuracy of the information offered by. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will give you the right to keep our website updated with accurate, accurate information about the company.\nWe hope that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 445,
+     "note": "insert \" by\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the customer to be responsible for the accuracy of the information offered by the. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will give you the right to keep our website updated with accurate, accurate information about the company.\nWe hope that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 449,
+     "note": "insert \" the\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the customer to be responsible for the accuracy of the information offered by the company. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will give you the right to keep our website updated with accurate, accurate information about the company.\nWe hope that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 457,
+     "note": "insert \" company\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the customer to be responsible for the accuracy of the information offered by the company. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will give you the right to keep our website updated with accurate, accurate information about the company.\nWe hope that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 283,
+     "note": "move the cursor 32 tokens left"
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the customer to be responsible for the accuracy of the information offered by the company. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will give you the right to keep our website updated with accurate, accurate information about the company.\nWe hope that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 260,
+     "note": "move the cursor 4 tokens left"
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the customer to be responsible for the accuracy of the information offered by the company. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will give you the right to keep our website updated with accurate, accurate information about the company.\nWe hope that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 241,
+     "note": "move the cursor 2 tokens left"
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the customer to be responsible for the accuracy of the information offered by the company. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will give you the right to keep our website updated with accurate, accurate information about the company.\nWe hope that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 237,
+     "note": "move the cursor 1 token left"
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the customer to be responsible for the accuracy of the information offered by the company. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will give you the right to keep our website updated with accurate, accurate information about the company.\nWe hope that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 241,
+     "note": "insert \" the\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the set the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the customer to be responsible for the accuracy of the information offered by the company. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will give you the right to keep our website updated with accurate, accurate information about the company.\nWe hope that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 245,
+     "note": "insert \" set\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the set and the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the customer to be responsible for the accuracy of the information offered by the company. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will give you the right to keep our website updated with accurate, accurate information about the company.\nWe hope that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 249,
+     "note": "insert \" and\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the set and the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the customer to be responsible for the accuracy of the information offered by the company. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will give you the right to keep our website updated with accurate, accurate information about the company.\nWe hope that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 245,
+     "note": "move the cursor 1 token left"
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the set standards and the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the customer to be responsible for the accuracy of the information offered by the company. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will give you the right to keep our website updated with accurate, accurate information about the company.\nWe hope that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 255,
+     "note": "insert \" standards\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the set standards and the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the customer to be responsible for the accuracy of the information offered by the company. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will give you the right to keep our website updated with accurate, accurate information about the company.\nWe hope that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 245,
+     "note": "move the cursor 1 token left"
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the set standards standards and the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the customer to be responsible for the accuracy of the information offered by the company. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will give you the right to keep our website updated with accurate, accurate information about the company.\nWe hope that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 255,
+     "note": "insert \" standards\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the set standards and the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the customer to be responsible for the accuracy of the information offered by the company. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will give you the right to keep our website updated with accurate, accurate information about the company.\nWe hope that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 245,
+     "note": "backspace (delete \" standards\")"
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the set of standards and the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the customer to be responsible for the accuracy of the information offered by the company. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will give you the right to keep our website updated with accurate, accurate information about the company.\nWe hope that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 248,
+     "note": "insert \" of\""
+    },
+    {
+     "text": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with the set of standards and the quality management system provided by the Company.\nIf one is not satisfied from the quality, it becomes the responsibility of the customer to be responsible for the accuracy of the information offered by the company. We take excellent care in the preparation of such documents. If we believe you have not addressed the problem, we will give you the right to keep our website updated with accurate, accurate information about the company.\nWe hope that you can make sure that you are satisfied.\nIf you wish to reach us, please contact our Customer Care office for guidance.",
+     "cursor": 248,
+     "note": "stop"
+    }
+   ],
+   "counts": {
+    "actions": 142,
+    "inserts": 120,
+    "moves": 17,
+    "backspaces": 4
+   },
+   "prompt": "The Company applies the Quality Management System described in their Company Documented Information to provide quality assurance to their clients and continual improvement. The Documented Information has been developed in accordance with",
+   "locked_prefix_chars": 237
+  }
+ ]
+}

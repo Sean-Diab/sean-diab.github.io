@@ -1,0 +1,886 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Demos | Sean Diab</title>
+  <meta name="description" content="Demos of three projects by Sean Diab: Clash Royale agents and a board-reading vision model, Reviser (a language model that edits with a cursor), and FaceOff." />
+  <link rel="canonical" href="https://sean-diab.github.io/demos/" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Demos | Sean Diab" />
+  <meta property="og:description" content="Clash Royale AI, Reviser and FaceOff, shown working." />
+  <meta property="og:url" content="https://sean-diab.github.io/demos/" />
+  <meta property="og:image" content="https://sean-diab.github.io/profile_pic.jpeg" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%232f5a9b'/%3E%3Ctext x='50' y='68' font-size='46' text-anchor='middle' fill='white' font-family='Georgia,serif'%3ESD%3C/text%3E%3C/svg%3E" />
+  <script>
+    (function () {
+      try {
+        var saved = localStorage.getItem('theme');
+        if (saved) document.documentElement.setAttribute('data-theme', saved);
+      } catch (e) {}
+    })();
+  </script>
+  <style>
+    :root {
+      --bg: #fdfdfc;
+      --text: #1b1d1f;
+      --muted: #5c6166;
+      --line: #e7e8ea;
+      --link: #2f5a9b;
+      --panel: #f6f6f4;
+      --rv-ins: #b23a26;
+      --rv-now: #fde68a;
+      --rv-move: rgba(47, 90, 155, 0.16);
+      --rv-del: #8a8f94;
+      --rv-append: #c9cdd2;
+      --maxw: 880px;
+    }
+
+    html[data-theme="dark"] {
+      --bg: #181810;
+      --text: #d6d2cd;
+      --muted: #aba398;
+      --line: #363b3d;
+      --link: #7baad7;
+      --panel: #202019;
+      --rv-ins: #f08f7c;
+      --rv-now: rgba(250, 204, 21, 0.32);
+      --rv-move: rgba(123, 170, 215, 0.22);
+      --rv-del: #8d8780;
+      --rv-append: #4a4f52;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #181810;
+        --text: #d6d2cd;
+        --muted: #aba398;
+        --line: #363b3d;
+        --link: #7baad7;
+        --panel: #202019;
+        --rv-ins: #f08f7c;
+        --rv-now: rgba(250, 204, 21, 0.32);
+        --rv-move: rgba(123, 170, 215, 0.22);
+        --rv-del: #8d8780;
+        --rv-append: #4a4f52;
+      }
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--text);
+      transition: background 0.2s, color 0.2s;
+    }
+
+    body {
+      font-family: Georgia, "Times New Roman", Times, serif;
+      line-height: 1.65;
+      font-size: 18px;
+    }
+
+    #theme-toggle {
+      position: fixed;
+      top: 16px;
+      right: 20px;
+      background: var(--bg);
+      border: 1px solid var(--line);
+      color: var(--muted);
+      border-radius: 50%;
+      width: 34px;
+      height: 34px;
+      cursor: pointer;
+      font-size: 15px;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+
+    #theme-toggle:hover { border-color: var(--text); color: var(--text); }
+
+    .page {
+      max-width: var(--maxw);
+      margin: 0 auto;
+      padding: 38px 22px 64px;
+    }
+
+    h1, h2, h3 {
+      margin: 0;
+      font-weight: 500;
+      line-height: 1.25;
+      letter-spacing: 0.01em;
+    }
+
+    h1 { font-size: clamp(2rem, 4.8vw, 2.8rem); margin-bottom: 8px; }
+    h2 { font-size: 1.7rem; margin: 0 0 6px; }
+    h3 { font-size: 1.2rem; margin: 0 0 8px; }
+
+    p { margin: 0 0 14px; }
+
+    a { color: var(--link); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .back { font-size: 0.95rem; color: var(--muted); margin-bottom: 18px; display: inline-block; }
+
+    .subtitle { color: var(--muted); margin-bottom: 14px; }
+
+    .toc { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 1rem; }
+    .toc span { color: var(--muted); }
+
+    .project {
+      border-top: 1px solid var(--line);
+      margin-top: 40px;
+      padding-top: 30px;
+      scroll-margin-top: 12px;
+    }
+
+    .meta { color: var(--muted); font-size: 0.92rem; margin-bottom: 12px; }
+
+    .small { font-size: 0.92rem; color: var(--muted); }
+
+    ul { margin: 6px 0 14px; padding-left: 22px; }
+    li { margin-bottom: 6px; }
+
+    /* video + the words that go with it */
+    .demo {
+      display: grid;
+      grid-template-columns: minmax(0, 380px) minmax(0, 1fr);
+      gap: 28px;
+      align-items: start;
+      margin: 26px 0 8px;
+    }
+
+    .clip { margin: 0; }
+
+    .clip video {
+      display: block;
+      width: 100%;
+      height: auto;
+      max-height: 86vh;
+      background: #000;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    .clip figcaption { color: var(--muted); font-size: 0.82rem; line-height: 1.4; margin-top: 6px; }
+
+    .facts {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin: 14px 0;
+    }
+
+    .fact {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px 12px;
+    }
+
+    .fact b { display: block; font-size: 1.25rem; font-weight: 500; line-height: 1.3; }
+    .fact span { display: block; color: var(--muted); font-size: 0.82rem; line-height: 1.35; }
+
+    .key { display: inline-block; width: 11px; height: 11px; border-radius: 2px; border: 2px solid; vertical-align: -1px; margin-right: 3px; }
+    .key.blue { border-color: #60a5fa; }
+    .key.red { border-color: #f87171; }
+
+    /* Reviser replay */
+    .rv {
+      margin: 22px 0 10px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--panel);
+      padding: 14px 16px 16px;
+    }
+
+    .rv-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+
+    .rv-tab {
+      appearance: none;
+      font: inherit;
+      font-size: 0.84rem;
+      line-height: 1.3;
+      text-align: left;
+      color: var(--text);
+      background: var(--bg);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 6px 10px;
+      cursor: pointer;
+    }
+
+    .rv-tab small { display: block; color: var(--muted); font-size: 0.74rem; }
+    .rv-tab:hover { border-color: var(--muted); }
+    .rv-tab[aria-selected="true"] { border-color: var(--link); box-shadow: inset 0 0 0 1px var(--link); }
+
+    .rv-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin-bottom: 4px; }
+    .rv-head h3 { margin: 0; }
+    .rv-model { color: var(--muted); font-size: 0.88rem; }
+
+    .rv-task { color: var(--muted); font-size: 0.9rem; margin-bottom: 8px; }
+    .rv-task q { color: var(--text); }
+
+    .rv-canvas {
+      display: grid;
+      background: var(--bg);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      font-size: 0.86rem;
+      line-height: 1.7;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    .rv-canvas > div { grid-area: 1 / 1; min-width: 0; }
+    .rv-sizer { visibility: hidden; }
+
+    .rv-canvas .lk { color: var(--muted); }
+    .rv-canvas .jx { color: var(--rv-ins); }
+    .rv-canvas .now { background: var(--rv-now); color: var(--text); border-radius: 2px; }
+    .rv-canvas .mv { background: var(--rv-move); }
+
+    .rv-canvas del {
+      color: var(--rv-del);
+      text-decoration: line-through;
+      text-decoration-thickness: 2px;
+    }
+
+    .rv-caret {
+      display: inline-block;
+      position: relative;
+      width: 0;
+      height: 1em;
+    }
+
+    .rv-caret::after {
+      content: "";
+      position: absolute;
+      left: -1px;
+      top: -0.05em;
+      width: 2px;
+      height: 1.3em;
+      background: var(--link);
+      animation: rv-blink 1s steps(1) infinite;
+    }
+
+    @keyframes rv-blink { 50% { opacity: 0; } }
+
+    .rv-step {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 4px 10px;
+      margin: 10px 0 8px;
+      font-size: 0.92rem;
+      min-height: 1.6em;
+    }
+
+    .rv-count { color: var(--muted); font-variant-numeric: tabular-nums; }
+
+    .rv-kind {
+      font-size: 0.74rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      border-radius: 4px;
+      padding: 1px 6px;
+      border: 1px solid var(--line);
+      background: var(--bg);
+    }
+
+    .rv-strip {
+      display: flex;
+      gap: 1px;
+      height: 16px;
+      margin: 4px 0 6px;
+      cursor: pointer;
+    }
+
+    .rv-strip i {
+      flex: 1 1 0;
+      min-width: 1px;
+      border-radius: 1px;
+      background: var(--rv-append);
+      opacity: 0.85;
+    }
+
+    .rv-strip i.jx { background: var(--rv-ins); }
+    .rv-strip i.mov { background: var(--link); }
+    .rv-strip i.del { background: var(--text); }
+    .rv-strip i.stop, .rv-strip i.start { background: var(--muted); }
+    .rv-strip i.past { opacity: 0.35; }
+    .rv-strip i.cur { opacity: 1; box-shadow: 0 0 0 2px var(--bg), 0 0 0 3px var(--text); }
+
+    .rv-slider { width: 100%; margin: 2px 0 8px; accent-color: var(--link); }
+
+    .rv-ctrl { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+
+    .rv-ctrl button {
+      appearance: none;
+      font: inherit;
+      font-size: 0.86rem;
+      color: var(--text);
+      background: var(--bg);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 4px 12px;
+      cursor: pointer;
+      min-width: 38px;
+    }
+
+    .rv-ctrl button:hover { border-color: var(--text); }
+    .rv-ctrl .rv-play { min-width: 84px; }
+
+    .rv-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 12px; font-size: 0.8rem; color: var(--muted); }
+    .rv-legend span { white-space: nowrap; }
+    .sw { display: inline-block; width: 12px; height: 12px; border-radius: 2px; vertical-align: -1px; margin-right: 4px; }
+
+    .rv-why { margin: 14px 0 0; font-size: 0.95rem; }
+
+    .rv-compare { margin-top: 12px; display: grid; gap: 8px; }
+    .rv-compare[hidden] { display: none; }
+
+    .rv-out {
+      background: var(--bg);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 0.9rem;
+      line-height: 1.55;
+    }
+
+    .rv-out b { display: block; font-weight: 500; font-size: 0.8rem; color: var(--muted); letter-spacing: 0.02em; }
+    .rv-out mark { background: none; color: var(--rv-ins); text-decoration: underline; text-underline-offset: 2px; }
+    .rv-note { font-size: 0.84rem; color: var(--muted); margin: 0; }
+
+    .rv:focus-visible, .rv-tab:focus-visible, .rv-ctrl button:focus-visible { outline: 3px solid var(--link); outline-offset: 2px; }
+
+    /* FaceOff */
+    .shot-row {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin: 16px 0 10px;
+    }
+
+    .shot { margin: 0; min-width: 0; }
+
+    .shot a { display: block; cursor: zoom-in; }
+
+    .shot img {
+      display: block;
+      width: 100%;
+      height: auto;
+      aspect-ratio: 1320 / 2868;
+      object-fit: contain;
+      object-position: top;
+      background: #000;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    .shot figcaption { color: var(--muted); font-size: 0.78rem; line-height: 1.35; margin-top: 5px; text-align: center; }
+
+    .stores { display: flex; flex-wrap: wrap; gap: 8px 18px; }
+
+    footer { margin-top: 48px; border-top: 1px solid var(--line); padding-top: 16px; color: var(--muted); font-size: 0.9rem; }
+
+    @media (max-width: 760px) {
+      body { font-size: 17px; }
+      .demo { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+      .clip video { max-height: 80vh; }
+      .shot-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .rv { padding: 12px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html, body { transition: none; }
+      .rv-caret::after { animation: none; }
+    }
+  </style>
+</head>
+<body>
+  <button id="theme-toggle" type="button" aria-label="Toggle dark mode">&#9790;&#xFE0E;</button>
+
+  <main class="page">
+    <a class="back" href="../">&larr; sean-diab.github.io</a>
+    <h1>Demos</h1>
+    <p class="subtitle">Sean Diab &middot; three projects, shown working.</p>
+    <nav class="toc" aria-label="Projects on this page">
+      <a href="#clash-royale-ai">1. Clash Royale AI</a>
+      <a href="#reviser">2. Reviser</a>
+      <a href="#faceoff">3. FaceOff</a>
+    </nav>
+
+    <!-- 1. Clash Royale AI -->
+    <section class="project" id="clash-royale-ai">
+      <h2>Clash Royale AI</h2>
+      <p class="meta">Solo project &middot; reinforcement learning and computer vision</p>
+      <p>
+        Agents that play full games of Clash Royale on their own, trained with reinforcement learning by playing
+        against each other in a headless simulator of the game's battles, and a vision model that reads the board
+        straight from video.
+      </p>
+
+      <div class="demo">
+        <figure class="clip">
+          <video controls playsinline preload="metadata" poster="./cr_replay.jpg" aria-label="Replay: X-Bow agent against Hog Rider agent, the last 20 seconds of overtime">
+            <source src="./cr_replay.mp4" type="video/mp4" />
+          </video>
+          <figcaption>35 s, with sound. Both sides are trained models.</figcaption>
+        </figure>
+        <div>
+          <h3>Two agents, the last 20 seconds of overtime</h3>
+          <p>
+            The <b>X-Bow</b> agent (bottom, blue) plays the <b>Hog Rider</b> agent (top, red). Every card is chosen
+            and placed by the models; nobody touches the game.
+          </p>
+          <p>
+            The clip starts at 4:40, with 20 seconds left in overtime. The X-Bow agent keeps rebuilding its X-Bow
+            (at 4:40 and again at 4:52) and defends with Archers, Skeletons and The Log, while the Hog agent answers
+            with Cannon, Ice Golem and one more Hog Rider. No tower falls before time runs out, so the tiebreaker
+            drains the towers and the Hog agent wins 1&ndash;0 on tower health.
+          </p>
+          <p class="small">X-Bow model x1c, version 2600 &middot; Hog model p2, version 4750 &middot; arena 15.</p>
+        </div>
+      </div>
+
+      <div class="demo">
+        <figure class="clip">
+          <video id="cv-video" controls muted loop playsinline preload="metadata" poster="./cv_swarm.jpg" aria-label="Unit detector running on a crowded board">
+            <source src="./cv_swarm.mp4" type="video/mp4" />
+          </video>
+          <figcaption>20 s at 30 fps, a battle held out of training.</figcaption>
+        </figure>
+        <div>
+          <h3>Reading the board: units in a swarm</h3>
+          <p>
+            A detector looks at one frame of the arena at a time and finds every unit on it: where it stands,
+            which side owns it, and which card it came from.
+          </p>
+          <p>
+            Each box is a unit the model found, colored by the side it says the unit belongs to
+            (<span class="key blue"></span>bottom player, <span class="key red"></span>top player). The label is the
+            card it predicts, shown when that name is right, so the rare box without a label is a unit it found but
+            misnamed.
+          </p>
+          <div class="facts">
+            <div class="fact"><b>98.8%</b><span>of the 11,289 units in these 600 frames found</span></div>
+            <div class="fact"><b>97.7%</b><span>of the found units given the right card</span></div>
+            <div class="fact"><b>0.3%</b><span>of its detections are false</span></div>
+            <div class="fact"><b>31</b><span>units on screen at the busiest moment, all 15 skeletons of an army found</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Reviser -->
+    <section class="project" id="reviser">
+      <h2>Reviser</h2>
+      <p class="meta">Solo research project &middot; 100M and 300M parameters</p>
+      <p>
+        A small decoder-only language model that produces text as a sequence of cursor actions instead of only
+        appending tokens: at each step it <b>inserts a token</b> at the cursor, <b>moves the cursor</b> left or right
+        by some number of tokens, <b>backspaces</b> the token before it, or <b>stops</b>. Each action costs the same as
+        one step of an ordinary language model, so an edit takes a few actions instead of retyping the whole text,
+        and it can leave a gap while writing and come back to fill it.
+      </p>
+
+      <div class="rv" id="rv" tabindex="-1">
+        <div class="rv-tabs" role="tablist" aria-label="Examples" id="rv-tabs"></div>
+        <div class="rv-head"><h3 id="rv-title">Loading the examples&hellip;</h3><span class="rv-model" id="rv-model"></span></div>
+        <div class="rv-task" id="rv-task"></div>
+        <div class="rv-canvas" aria-live="polite" aria-atomic="true">
+          <div class="rv-sizer" id="rv-sizer" aria-hidden="true"></div>
+          <div id="rv-text"></div>
+        </div>
+        <div class="rv-step"><span class="rv-count" id="rv-count"></span><span class="rv-kind" id="rv-kind"></span><span id="rv-note"></span></div>
+        <div class="rv-strip" id="rv-strip" title="Every action; click to jump" aria-hidden="true"></div>
+        <input class="rv-slider" id="rv-slider" type="range" min="0" max="0" value="0" aria-label="Step" />
+        <div class="rv-ctrl">
+          <button type="button" id="rv-first" aria-label="First step">&#x23EE;&#xFE0E;</button>
+          <button type="button" id="rv-prev" aria-label="Previous step">&lsaquo;</button>
+          <button type="button" class="rv-play" id="rv-play">&#x25B6;&#xFE0E; Play</button>
+          <button type="button" id="rv-next" aria-label="Next step">&rsaquo;</button>
+          <button type="button" id="rv-last" aria-label="Last step">&#x23ED;&#xFE0E;</button>
+          <span class="small" id="rv-counts"></span>
+        </div>
+        <div class="rv-legend">
+          <span><span class="sw" style="background: var(--rv-now)"></span>this step's insert</span>
+          <span><span class="sw" style="background: var(--rv-ins)"></span>inserted into existing text</span>
+          <span><span class="sw" style="background: var(--link)"></span>cursor move</span>
+          <span><span class="sw" style="background: var(--text)"></span>backspace</span>
+          <span id="rv-lk-key"><span class="sw" style="background: var(--muted)"></span>locked prompt</span>
+        </div>
+        <p class="rv-why" id="rv-why"></p>
+        <div class="rv-compare" id="rv-compare" hidden></div>
+      </div>
+      <p class="small">
+        Drag the slider, click the action strip, or use the arrow keys. Examples are from the paper's appendix,
+        picked to show the behavior rather than as averages.
+      </p>
+
+      <div class="facts">
+        <div class="fact"><b>+7.2 / +4.5</b><span>SARI on CoEdIT over a same-size rewriter trained on the same data (100M / 300M)</span></div>
+        <div class="fact"><b>~1/3</b><span>of the rewriter's decoding steps for the same edits</span></div>
+        <div class="fact"><b>62&ndash;74%</b><span>win rate against diffusion language models of similar size</span></div>
+        <div class="fact"><b>85&ndash;87%</b><span>of the time it backspaces a token it just repeated</span></div>
+      </div>
+      <p>
+        <a href="https://arxiv.org/abs/2609.20830" target="_blank" rel="noopener noreferrer">Paper</a> &middot;
+        <a href="https://github.com/Sean-Diab/Reviser" target="_blank" rel="noopener noreferrer">Code</a> &middot;
+        <a href="https://huggingface.co/sean-diab/reviser-checkpoints" target="_blank" rel="noopener noreferrer">Checkpoints</a> &middot;
+        <a href="../reviser_trajectories.html">More trajectories</a>
+      </p>
+    </section>
+
+    <!-- 3. FaceOff -->
+    <section class="project" id="faceoff">
+      <h2>FaceOff</h2>
+      <p class="meta">Founder, solo-built &middot; May&ndash;Sep 2026 &middot; live on the App Store and Google Play</p>
+      <p>
+        A real-time social and streaming app for Clash Royale players: broadcast your screen live with chat, talk to
+        your opponent over voice during a match, and keep replay-backed battle history. Native SwiftUI (iOS) and
+        Jetpack Compose (Android) apps on one FastAPI/PostgreSQL backend, with LiveKit/WebRTC for streaming and voice.
+      </p>
+      <ul>
+        <li>Recognizes the matched opponent from the screen capture (template matching and OCR) and connects both players to a voice room automatically.</li>
+        <li>Hardware H.264 screen sharing up to 1080p at 60 fps, recording without re-encoding, and replay clips aligned to battle timestamps.</li>
+        <li>Sign in with Apple and Google, push notifications, moderation, privacy controls, and nine languages including Arabic right-to-left.</li>
+      </ul>
+      <div class="shot-row">
+        <figure class="shot">
+          <a href="../faceoff_shot_1.png" target="_blank" rel="noopener"><img src="../faceoff_shot_1.png" alt="FaceOff iOS home screen with profile, screen sharing, and recent matches" width="1320" height="2868" loading="lazy" decoding="async" /></a>
+          <figcaption>iOS home</figcaption>
+        </figure>
+        <figure class="shot">
+          <a href="../faceoff_shot_2.png" target="_blank" rel="noopener"><img src="../faceoff_shot_2.png" alt="FaceOff iOS Battle Log with match results and player decks" width="1320" height="2868" loading="lazy" decoding="async" /></a>
+          <figcaption>iOS Battle Log</figcaption>
+        </figure>
+        <figure class="shot">
+          <a href="../faceoff_shot_3.png" target="_blank" rel="noopener"><img src="../faceoff_shot_3.png" alt="FaceOff Android home screen with profile, screen sharing, and recent matches" width="1350" height="2400" loading="lazy" decoding="async" /></a>
+          <figcaption>Android home</figcaption>
+        </figure>
+        <figure class="shot">
+          <a href="../faceoff_shot_4.png" target="_blank" rel="noopener"><img src="../faceoff_shot_4.png" alt="FaceOff Android Battle Log with match results and player decks" width="1350" height="2400" loading="lazy" decoding="async" /></a>
+          <figcaption>Android Battle Log</figcaption>
+        </figure>
+      </div>
+      <p class="stores">
+        <a href="https://apps.apple.com/us/app/faceoff-live/id6800578167" target="_blank" rel="noopener noreferrer">App Store</a>
+        <a href="https://play.google.com/store/apps/details?id=com.seandiab.faceoff" target="_blank" rel="noopener noreferrer">Google Play</a>
+        <a href="../#faceoff-project">Full write-up</a>
+      </p>
+    </section>
+
+    <footer>
+      <a href="../">Sean Diab</a> &middot; <a href="mailto:diabsean2005@gmail.com">Email</a> &middot;
+      <a href="https://github.com/Sean-Diab" target="_blank" rel="noopener noreferrer">GitHub</a> &middot;
+      <a href="https://www.linkedin.com/in/sean-diab/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+    </footer>
+  </main>
+
+  <script>
+    (function () {
+      var root = document.documentElement;
+      var btn = document.getElementById('theme-toggle');
+
+      function isDark() {
+        var saved = null;
+        try { saved = localStorage.getItem('theme'); } catch (e) {}
+        if (saved) return saved === 'dark';
+        return window.matchMedia('(prefers-color-scheme: dark)').matches;
+      }
+
+      function apply(dark) {
+        root.setAttribute('data-theme', dark ? 'dark' : 'light');
+        btn.innerHTML = dark ? '&#9728;&#xFE0E;' : '&#9790;&#xFE0E;';
+      }
+
+      apply(isDark());
+      btn.addEventListener('click', function () {
+        var next = root.getAttribute('data-theme') !== 'dark';
+        try { localStorage.setItem('theme', next ? 'dark' : 'light'); } catch (e) {}
+        apply(next);
+      });
+    })();
+
+    // the detector clip plays (muted, looping) while it is on screen
+    (function () {
+      var v = document.getElementById('cv-video');
+      if (!v || !('IntersectionObserver' in window)) return;
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      var userPaused = false;
+      v.addEventListener('pause', function () { if (!v.dataset.auto) userPaused = true; delete v.dataset.auto; });
+      v.addEventListener('play', function () { userPaused = false; });
+      new IntersectionObserver(function (es) {
+        es.forEach(function (e) {
+          if (e.isIntersecting && e.intersectionRatio > 0.5) {
+            if (!userPaused && v.paused) v.play().catch(function () {});
+          } else if (!v.paused) {
+            v.dataset.auto = '1';
+            v.pause();
+          }
+        });
+      }, { threshold: [0, 0.5, 1] }).observe(v);
+    })();
+
+    // Reviser: step through the model's actions
+    (function () {
+      var $ = function (id) { return document.getElementById(id); };
+      var box = $('rv'), tabs = $('rv-tabs'), slider = $('rv-slider'), strip = $('rv-strip'), playBtn = $('rv-play');
+      var EX = [], ex = null, S = [], k = 0, timer = null, seen = false;
+      var KIND = { start: 'Start', ins: 'Insert', mov: 'Move', del: 'Backspace', stop: 'Stop', other: 'Step' };
+
+      function esc(s) {
+        return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      }
+
+      function kindOf(note, i) {
+        if (i === 0) return 'start';
+        if (/^insert/i.test(note)) return 'ins';
+        if (/^move/i.test(note)) return 'mov';
+        if (/^backspace/i.test(note)) return 'del';
+        if (/^stop/i.test(note)) return 'stop';
+        return 'other';
+      }
+
+      function fill(n, v) { var a = []; for (var i = 0; i < n; i++) a.push(v); return a; }
+
+      // where the texts of two neighbouring steps differ: [start, end in prev, end in next]
+      function diff(prev, next, hint) {
+        var a = 0, n = Math.min(prev.length, next.length);
+        while (a < n && prev[a] === next[a]) a++;
+        var e1 = prev.length, e2 = next.length;
+        while (e1 > a && e2 > a && prev[e1 - 1] === next[e2 - 1]) { e1--; e2--; }
+        return [a, e1, e2];
+      }
+
+      // every step with what changed and where each character came from:
+      // o = there from the start (input or prompt), w = written at the end, j = inserted into existing text
+      function prepare(e) {
+        var st = e.steps, out = [], org = fill(st[0].text.length, 'o');
+        out.push({ text: st[0].text, cur: st[0].cursor, kind: 'start', note: st[0].note, org: org });
+        for (var s = 1; s < st.length; s++) {
+          var p = st[s - 1], q = st[s], kind = kindOf(q.note, s);
+          var r = { text: q.text, cur: q.cursor, kind: kind, note: q.note, from: p.cursor };
+          var a, b, c;
+          if (p.text === q.text) {
+            org = org.slice();
+          } else {
+            if (kind === 'ins' && q.cursor > p.cursor && q.text.slice(0, p.cursor) === p.text.slice(0, p.cursor) &&
+                q.text.slice(q.cursor) === p.text.slice(p.cursor)) {
+              a = p.cursor; b = p.cursor; c = q.cursor;
+            } else if (kind === 'del' && q.cursor < p.cursor && p.text.slice(0, q.cursor) + p.text.slice(p.cursor) === q.text) {
+              a = q.cursor; b = p.cursor; c = q.cursor;
+            } else {
+              var d = diff(p.text, q.text); a = d[0]; b = d[1]; c = d[2];
+            }
+            if (b > a) { r.del = p.text.slice(a, b); r.at = a; }
+            if (c > a) { r.ins = [a, c]; r.mid = b < p.text.length; }
+            org = org.slice(0, a).concat(fill(c - a, r.mid ? 'j' : 'w'), org.slice(b));
+          }
+          r.org = org;
+          out.push(r);
+        }
+        return out;
+      }
+
+      function render() {
+        var r = S[k], t = r.text, lock = ex.locked_prefix_chars || 0, cls = [], i;
+        for (i = 0; i < t.length; i++) {
+          var o = r.org[i];
+          cls.push(o === 'j' ? 'jx' : o === 'o' && lock && i < lock ? 'lk' : '');
+        }
+        if (r.ins) for (i = r.ins[0]; i < r.ins[1]; i++) cls[i] += ' now';
+        if (r.kind === 'mov') {
+          var lo = Math.min(r.from, r.cur), hi = Math.max(r.from, r.cur);
+          for (i = lo; i < hi; i++) cls[i] += ' mv';
+        }
+        var html = '', run = '', rc = null;
+        function flush() {
+          if (run) html += rc ? '<span class="' + rc.trim() + '">' + esc(run) + '</span>' : esc(run);
+          run = '';
+        }
+        for (i = 0; i <= t.length; i++) {
+          if (i === r.cur) {
+            flush();
+            html += '<span class="rv-caret" aria-hidden="true"></span>';
+            if (r.del !== undefined && r.at === i) {
+              html += '<del title="deleted">' + esc(/^\s+$/.test(r.del) ? r.del.replace(/ /g, '·') : r.del) + '</del>';
+            }
+          } else if (r.del !== undefined && r.at === i) {
+            flush();
+            html += '<del title="deleted">' + esc(r.del) + '</del>';
+          }
+          if (i === t.length) break;
+          var c = cls[i] || '';
+          if (c !== rc) { flush(); rc = c; }
+          run += t[i];
+        }
+        flush();
+        $('rv-text').innerHTML = html;
+
+        var last = S.length - 1;
+        $('rv-count').textContent = 'Step ' + k + ' of ' + last;
+        $('rv-kind').textContent = KIND[r.kind] || 'Step';
+        $('rv-note').textContent = r.kind === 'start' ? r.note : r.note.charAt(0).toUpperCase() + r.note.slice(1);
+        slider.value = k;
+        var cells = strip.children;
+        for (i = 0; i < cells.length; i++) {
+          cells[i].classList.toggle('past', i < k);
+          cells[i].classList.toggle('cur', i === k);
+        }
+        $('rv-compare').hidden = !ex.compare;
+      }
+
+      function toks(s) { return s.match(/\s+|[^\s]+/g) || []; }
+
+      // out with the words that are not in base underlined
+      function marked(base, out) {
+        var a = toks(base), b = toks(out), n = a.length, m = b.length, L = [], i, j;
+        for (i = 0; i <= n; i++) L.push(fill(m + 1, 0));
+        for (i = n - 1; i >= 0; i--) {
+          for (j = m - 1; j >= 0; j--) L[i][j] = a[i] === b[j] ? L[i + 1][j + 1] + 1 : Math.max(L[i + 1][j], L[i][j + 1]);
+        }
+        var html = '';
+        i = 0; j = 0;
+        while (j < m) {
+          if (i < n && a[i] === b[j]) { html += esc(b[j]); i++; j++; }
+          else if (i < n && L[i + 1][j] >= L[i][j + 1]) i++;
+          else { html += /\S/.test(b[j]) ? '<mark>' + esc(b[j]) + '</mark>' : esc(b[j]); j++; }
+        }
+        return html;
+      }
+
+      function choose(n, keepStep) {
+        stop();
+        ex = EX[n];
+        S = ex.S;
+        k = keepStep ? Math.min(k, S.length - 1) : 0;
+        [].forEach.call(tabs.children, function (b, i) {
+          b.setAttribute('aria-selected', i === n ? 'true' : 'false');
+          b.tabIndex = i === n ? 0 : -1;
+        });
+        $('rv-title').textContent = ex.title;
+        $('rv-model').textContent = ex.model;
+        var first = ex.steps[0].text;
+        if (ex.locked_prefix_chars) {
+          $('rv-task').innerHTML = 'Writing: the grey prompt is locked; the model continues it and may jump back into its own text.';
+        } else {
+          var at = ex.prompt.indexOf(first.slice(0, 16));
+          var instr = at > 0 ? ex.prompt.slice(0, at).trim().replace(/:$/, '') : '';
+          $('rv-task').innerHTML = 'Editing. Instruction: <q>' + esc(instr || 'edit') + '</q>. The cursor starts at the end of the input.';
+        }
+        $('rv-lk-key').hidden = !ex.locked_prefix_chars;
+        var longest = S.reduce(function (m, r) { return r.text.length > m.length ? r.text : m; }, '');
+        $('rv-sizer').textContent = longest + ' '.repeat(12);
+        slider.max = S.length - 1;
+        strip.innerHTML = S.map(function (r, i) {
+          var c = r.kind === 'ins' ? (r.mid ? 'jx' : 'ins') : r.kind;
+          return '<i class="' + c + '" data-i="' + i + '" title="' + i + ': ' + esc(r.note) + '"></i>';
+        }).join('');
+        var cn = ex.counts;
+        $('rv-counts').textContent = cn.actions + ' actions: ' + cn.inserts + ' inserts, ' + cn.moves + ' moves, ' + cn.backspaces + ' backspaces';
+        $('rv-why').textContent = ex.why;
+        var cmp = $('rv-compare');
+        if (ex.compare) {
+          var fin = S[S.length - 1].text;
+          cmp.innerHTML =
+            '<div class="rv-out"><b>Reviser output (changes underlined)</b>' + marked(first, fin) + '</div>' +
+            '<div class="rv-out"><b>Human reference</b>' + marked(first, ex.reference) + '</div>' +
+            '<div class="rv-out"><b>' + esc(ex.compare.label) + ', rewriting from scratch</b>' + marked(first, ex.compare.text) + '</div>' +
+            '<p class="rv-note">' + esc(ex.compare.note) + '</p>';
+        } else {
+          cmp.innerHTML = '';
+        }
+        render();
+      }
+
+      function go(n) {
+        k = Math.max(0, Math.min(S.length - 1, n));
+        render();
+      }
+
+      function dwell() {
+        var r = S[k + 1];
+        if (!r) return 0;
+        if (!ex.locked_prefix_chars) return 950;
+        return r.kind === 'ins' && !r.mid ? 70 : 750;
+      }
+
+      function tick() {
+        if (k >= S.length - 1) { stop(); return; }
+        go(k + 1);
+        timer = setTimeout(tick, dwell());
+      }
+
+      function play() {
+        if (timer) return;
+        if (k >= S.length - 1) go(0);
+        playBtn.innerHTML = '&#x275A;&#x275A; Pause';
+        timer = setTimeout(tick, k === 0 ? 600 : dwell());
+      }
+
+      function stop() {
+        if (timer) clearTimeout(timer);
+        timer = null;
+        playBtn.innerHTML = '&#x25B6;&#xFE0E; Play';
+      }
+
+      playBtn.addEventListener('click', function () { timer ? stop() : play(); });
+      $('rv-first').addEventListener('click', function () { stop(); go(0); });
+      $('rv-last').addEventListener('click', function () { stop(); go(S.length - 1); });
+      $('rv-prev').addEventListener('click', function () { stop(); go(k - 1); });
+      $('rv-next').addEventListener('click', function () { stop(); go(k + 1); });
+      slider.addEventListener('input', function () { stop(); go(+slider.value); });
+      strip.addEventListener('click', function (e) {
+        var i = e.target.getAttribute && e.target.getAttribute('data-i');
+        if (i !== null && i !== undefined) { stop(); go(+i); }
+      });
+      tabs.addEventListener('click', function (e) {
+        var b = e.target.closest('.rv-tab');
+        if (b) choose(+b.getAttribute('data-n'));
+      });
+      tabs.addEventListener('keydown', function (e) {
+        if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+        var cur = EX.indexOf(ex), n = (cur + (e.key === 'ArrowRight' ? 1 : EX.length - 1)) % EX.length;
+        choose(n);
+        tabs.children[n].focus();
+        e.preventDefault();
+      });
+      box.addEventListener('keydown', function (e) {
+        if (e.target === slider || e.target.closest('.rv-tabs')) return;
+        if (e.key === 'ArrowRight') { stop(); go(k + 1); e.preventDefault(); }
+        if (e.key === 'ArrowLeft') { stop(); go(k - 1); e.preventDefault(); }
+      });
+
+      fetch('./reviser.json').then(function (r) { return r.json(); }).then(function (d) {
+        EX = d.examples.map(function (e) { e.S = prepare(e); return e; });
+        tabs.innerHTML = EX.map(function (e, i) {
+          var w = e.locked_prefix_chars ? 'Writing' : 'Editing';
+          var size = /300M/.test(e.model) ? '300M' : '100M';
+          return '<button type="button" class="rv-tab" role="tab" data-n="' + i + '">' + esc(e.title) +
+            '<small>' + w + ' &middot; ' + size + ' &middot; ' + e.counts.actions + ' actions</small></button>';
+        }).join('');
+        choose(0);
+        var calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (!calm && 'IntersectionObserver' in window) {
+          new IntersectionObserver(function (es, ob) {
+            if (es[0].isIntersecting && !seen) { seen = true; ob.disconnect(); play(); }
+          }, { threshold: 0.6 }).observe(box);
+        }
+      }).catch(function () {
+        $('rv-title').textContent = 'The examples could not be loaded.';
+      });
+    })();
+  </script>
+</body>
+</html>
