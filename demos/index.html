@@ -203,27 +203,6 @@
     .fact b { display: block; font-size: 1.25rem; font-weight: 500; line-height: 1.3; }
     .fact span { display: block; color: var(--muted); font-size: 0.82rem; line-height: 1.35; }
 
-    .play {
-      margin-top: 30px;
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      background: var(--panel);
-      padding: 16px 18px 6px;
-    }
-
-    .play .dl {
-      display: inline-block;
-      border: 1px solid var(--link);
-      border-radius: 999px;
-      padding: 4px 14px;
-      font-size: 0.95rem;
-    }
-
-    .play .small { overflow-wrap: anywhere; }
-
-    .play-cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 28px; }
-    .play h4 { margin: 6px 0 2px; font-size: 1rem; }
-
     .key { display: inline-block; width: 11px; height: 11px; border-radius: 2px; border: 2px solid; vertical-align: -1px; margin-right: 3px; }
     .key.blue { border-color: #60a5fa; }
     .key.red { border-color: #f87171; }
@@ -437,7 +416,6 @@
     @media (max-width: 760px) {
       body { font-size: 17px; }
       .pair { display: block; width: auto; margin: 22px 0 8px; }
-      .play-cols { grid-template-columns: minmax(0, 1fr); }
       .col + .col { margin-top: 30px; }
       .col video { width: 100%; height: auto; }
       .shot-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -522,38 +500,6 @@
               detection within half a tile of the unit; right name is out of the found ones. Spells and projectiles are not drawn in
               the video.
             </p>
-          </div>
-        </div>
-      </div>
-
-      <div class="play" id="play">
-        <h3>Play against the agents</h3>
-        <p>
-          The game runs on my computer; your phone shows it and sends your taps back, so it works while my game server
-          is reachable (on the same Wi-Fi it is found by itself, otherwise use the address I give you). Pick an AI
-          opponent and drag cards onto the arena, as in the game.
-        </p>
-        <div class="play-cols">
-          <div>
-            <h4>Android</h4>
-            <p>
-              <a class="dl" href="./cr-vs-ai.apk" download>Download CR vs AI (.apk, 21 KB)</a>
-              <span class="small">&middot; Android 8.0 or newer</span>
-            </p>
-            <ul>
-              <li>Open this page on the phone and tap the download link. If Chrome warns about the file type, tap <b>Download anyway</b>.</li>
-              <li>Open the downloaded file. When Android asks, allow your browser to <b>Install unknown apps</b>, then go back and tap <b>Install</b>.</li>
-              <li>If Play Protect says the app is unrecognized, tap <b>More details &rarr; Install anyway</b>. It is one full-screen web view signed with a personal key, not through the Play Store.</li>
-            </ul>
-            <p class="small">SHA-256 d23bf3bf29e34d31bae49c98c80f0463efe0df8172ef9de400f277a47e89495f</p>
-          </div>
-          <div>
-            <h4>iPhone</h4>
-            <ul>
-              <li>Nothing to install: open the game's address in <b>Safari</b>. It is the same page the apps show.</li>
-              <li>For full screen, tap <b>Share &rarr; Add to Home Screen</b> and start it from the new icon.</li>
-              <li>There is also a native iPhone app, <b>CR vs AI</b>. Apple lets me install it only on iPhones registered to my developer account, so it is not a download here; I can add yours.</li>
-            </ul>
           </div>
         </div>
       </div>
