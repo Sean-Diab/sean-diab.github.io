@@ -839,8 +839,8 @@
       function dwell() {
         var r = S[k + 1];
         if (!r) return 0;
-        if (!ex.locked_prefix_chars) return 380 / speed;
-        return (r.kind === 'ins' && !r.mid ? 28 : 300) / speed;
+        if (!ex.locked_prefix_chars) return 190 / speed;
+        return (r.kind === 'ins' && !r.mid ? 14 : 150) / speed;
       }
 
       function tick() {
@@ -853,7 +853,7 @@
         if (timer) return;
         if (k >= S.length - 1) go(0);
         playBtn.innerHTML = '&#x275A;&#x275A; Pause';
-        timer = setTimeout(tick, k === 0 ? 400 / speed : dwell());
+        timer = setTimeout(tick, k === 0 ? 200 / speed : dwell());
       }
 
       function stop() {
