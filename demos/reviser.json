@@ -35,294 +35,6 @@
  },
  "examples": [
   {
-   "id": "edit-300m-plurals",
-   "title": "Three grammar fixes, back to front",
-   "model": "Reviser-Edit 300M",
-   "why": "Starts at the end of the sentence and jumps back to each error (choice, sale, offered), fixing all three in 14 actions and matching the human reference exactly; the AR rewriter retyped all 27 tokens and missed one.",
-   "steps": [
-    {
-     "text": "It offered recommendations for various stores, fashion matching, favorite competitive products, special sale of new arrivals, editor's choice, and more.",
-     "cursor": 152,
-     "note": "The input sentence, with the cursor at its end."
-    },
-    {
-     "text": "It offered recommendations for various stores, fashion matching, favorite competitive products, special sale of new arrivals, editor's choice, and more.",
-     "cursor": 141,
-     "note": "move the cursor 4 tokens left"
-    },
-    {
-     "text": "It offered recommendations for various stores, fashion matching, favorite competitive products, special sale of new arrivals, editor's, and more.",
-     "cursor": 134,
-     "note": "backspace (delete \" choice\")"
-    },
-    {
-     "text": "It offered recommendations for various stores, fashion matching, favorite competitive products, special sale of new arrivals, editor's choices, and more.",
-     "cursor": 142,
-     "note": "insert \" choices\""
-    },
-    {
-     "text": "It offered recommendations for various stores, fashion matching, favorite competitive products, special sale of new arrivals, editor's choices, and more.",
-     "cursor": 124,
-     "note": "move the cursor 4 tokens left"
-    },
-    {
-     "text": "It offered recommendations for various stores, fashion matching, favorite competitive products, special sale of new arrivals, editor's choices, and more.",
-     "cursor": 111,
-     "note": "move the cursor 2 tokens left"
-    },
-    {
-     "text": "It offered recommendations for various stores, fashion matching, favorite competitive products, special sale of new arrivals, editor's choices, and more.",
-     "cursor": 108,
-     "note": "move the cursor 1 token left"
-    },
-    {
-     "text": "It offered recommendations for various stores, fashion matching, favorite competitive products, special of new arrivals, editor's choices, and more.",
-     "cursor": 103,
-     "note": "backspace (delete \" sale\")"
-    },
-    {
-     "text": "It offered recommendations for various stores, fashion matching, favorite competitive products, special sales of new arrivals, editor's choices, and more.",
-     "cursor": 109,
-     "note": "insert \" sales\""
-    },
-    {
-     "text": "It offered recommendations for various stores, fashion matching, favorite competitive products, special sales of new arrivals, editor's choices, and more.",
-     "cursor": 54,
-     "note": "move the cursor 8 tokens left"
-    },
-    {
-     "text": "It offered recommendations for various stores, fashion matching, favorite competitive products, special sales of new arrivals, editor's choices, and more.",
-     "cursor": 30,
-     "note": "move the cursor 4 tokens left"
-    },
-    {
-     "text": "It offered recommendations for various stores, fashion matching, favorite competitive products, special sales of new arrivals, editor's choices, and more.",
-     "cursor": 10,
-     "note": "move the cursor 2 tokens left"
-    },
-    {
-     "text": "It recommendations for various stores, fashion matching, favorite competitive products, special sales of new arrivals, editor's choices, and more.",
-     "cursor": 2,
-     "note": "backspace (delete \" offered\")"
-    },
-    {
-     "text": "It offers recommendations for various stores, fashion matching, favorite competitive products, special sales of new arrivals, editor's choices, and more.",
-     "cursor": 9,
-     "note": "insert \" offers\""
-    },
-    {
-     "text": "It offers recommendations for various stores, fashion matching, favorite competitive products, special sales of new arrivals, editor's choices, and more.",
-     "cursor": 9,
-     "note": "stop"
-    }
-   ],
-   "counts": {
-    "actions": 14,
-    "inserts": 3,
-    "moves": 7,
-    "backspaces": 3
-   },
-   "prompt": "Fix grammar: It offered recommendations for various stores, fashion matching, favorite competitive products, special sale of new arrivals, editor's choice, and more.",
-   "reference": "It offers recommendations for various stores, fashion matching, favorite competitive products, special sales of new arrivals, editor's choices, and more.",
-   "compare": {
-    "label": "AR rewriter 300M",
-    "text": "It offers recommendations for various stores, fashion matching, favorite competitive products, special sales of new arrivals, editor's choice, and more.",
-    "note": "Same size, same training data, but writes the whole output from scratch, left to right. SARI vs. the human reference: AR rewriter 90.2, Reviser-Edit 100.0 (higher is better)."
-   }
-  },
-  {
-   "id": "edit-100m-only",
-   "title": "Moving one word",
-   "model": "Reviser-Edit 100M",
-   "why": "Clarifies the sentence by deleting \"only\" and retyping it one word earlier, plus removing a double space: an exact match in 11 actions. The AR rewriter dropped \"only\", which changes the meaning.",
-   "steps": [
-    {
-     "text": "By 2008  the factory at Palmela will be only producing the multi-purpose vehicle Sharan and the Eos models.",
-     "cursor": 107,
-     "note": "The input sentence, with the cursor at its end."
-    },
-    {
-     "text": "By 2008  the factory at Palmela will be only producing the multi-purpose vehicle Sharan and the Eos models.",
-     "cursor": 80,
-     "note": "move the cursor 8 tokens left"
-    },
-    {
-     "text": "By 2008  the factory at Palmela will be only producing the multi-purpose vehicle Sharan and the Eos models.",
-     "cursor": 58,
-     "note": "move the cursor 4 tokens left"
-    },
-    {
-     "text": "By 2008  the factory at Palmela will be only producing the multi-purpose vehicle Sharan and the Eos models.",
-     "cursor": 44,
-     "note": "move the cursor 2 tokens left"
-    },
-    {
-     "text": "By 2008  the factory at Palmela will be producing the multi-purpose vehicle Sharan and the Eos models.",
-     "cursor": 39,
-     "note": "backspace (delete \" only\")"
-    },
-    {
-     "text": "By 2008  the factory at Palmela will be producing the multi-purpose vehicle Sharan and the Eos models.",
-     "cursor": 36,
-     "note": "move the cursor 1 token left"
-    },
-    {
-     "text": "By 2008  the factory at Palmela will only be producing the multi-purpose vehicle Sharan and the Eos models.",
-     "cursor": 41,
-     "note": "insert \" only\""
-    },
-    {
-     "text": "By 2008  the factory at Palmela will only be producing the multi-purpose vehicle Sharan and the Eos models.",
-     "cursor": 23,
-     "note": "move the cursor 4 tokens left"
-    },
-    {
-     "text": "By 2008  the factory at Palmela will only be producing the multi-purpose vehicle Sharan and the Eos models.",
-     "cursor": 12,
-     "note": "move the cursor 2 tokens left"
-    },
-    {
-     "text": "By 2008  the factory at Palmela will only be producing the multi-purpose vehicle Sharan and the Eos models.",
-     "cursor": 8,
-     "note": "move the cursor 1 token left"
-    },
-    {
-     "text": "By 2008 the factory at Palmela will only be producing the multi-purpose vehicle Sharan and the Eos models.",
-     "cursor": 7,
-     "note": "backspace (delete \" \")"
-    },
-    {
-     "text": "By 2008 the factory at Palmela will only be producing the multi-purpose vehicle Sharan and the Eos models.",
-     "cursor": 7,
-     "note": "stop"
-    }
-   ],
-   "counts": {
-    "actions": 11,
-    "inserts": 1,
-    "moves": 7,
-    "backspaces": 2
-   },
-   "prompt": "Make this text clearer: By 2008  the factory at Palmela will be only producing the multi-purpose vehicle Sharan and the Eos models.",
-   "reference": "By 2008 the factory at Palmela will only be producing the multi-purpose vehicle Sharan and the Eos models.",
-   "compare": {
-    "label": "AR rewriter 100M",
-    "text": "By 2008 the factory at Palmela will be producing the multi-purpose vehicle Sharan and the Eos models.",
-    "note": "Same size, same training data, but writes the whole output from scratch, left to right. SARI vs. the human reference: AR rewriter 74.5, Reviser-Edit 100.0 (higher is better)."
-   }
-  },
-  {
-   "id": "edit-300m-puzzled",
-   "title": "Five fixes in one sentence",
-   "model": "Reviser-Edit 300M",
-   "why": "Fixes point/points, letting/let, faces/face, tried/trying and looks/look by jumping between them in 17 actions, leaving the rest of the sentence untouched.",
-   "steps": [
-    {
-     "text": "I'm sitting here with a stupid, puzzled looks on my faces tried to figure out how we letting Mo Williams score 52 point...",
-     "cursor": 122,
-     "note": "The input sentence, with the cursor at its end."
-    },
-    {
-     "text": "I'm sitting here with a stupid, puzzled looks on my faces tried to figure out how we letting Mo Williams score 52 point...",
-     "cursor": 119,
-     "note": "move the cursor 1 token left"
-    },
-    {
-     "text": "I'm sitting here with a stupid, puzzled looks on my faces tried to figure out how we letting Mo Williams score 52...",
-     "cursor": 113,
-     "note": "backspace (delete \" point\")"
-    },
-    {
-     "text": "I'm sitting here with a stupid, puzzled looks on my faces tried to figure out how we letting Mo Williams score 52 points...",
-     "cursor": 120,
-     "note": "insert \" points\""
-    },
-    {
-     "text": "I'm sitting here with a stupid, puzzled looks on my faces tried to figure out how we letting Mo Williams score 52 points...",
-     "cursor": 95,
-     "note": "move the cursor 4 tokens left"
-    },
-    {
-     "text": "I'm sitting here with a stupid, puzzled looks on my faces tried to figure out how we letting Mo Williams score 52 points...",
-     "cursor": 92,
-     "note": "move the cursor 1 token left"
-    },
-    {
-     "text": "I'm sitting here with a stupid, puzzled looks on my faces tried to figure out how we Mo Williams score 52 points...",
-     "cursor": 84,
-     "note": "backspace (delete \" letting\")"
-    },
-    {
-     "text": "I'm sitting here with a stupid, puzzled looks on my faces tried to figure out how we let Mo Williams score 52 points...",
-     "cursor": 88,
-     "note": "insert \" let\""
-    },
-    {
-     "text": "I'm sitting here with a stupid, puzzled looks on my faces tried to figure out how we let Mo Williams score 52 points...",
-     "cursor": 73,
-     "note": "move the cursor 4 tokens left"
-    },
-    {
-     "text": "I'm sitting here with a stupid, puzzled looks on my faces tried to figure out how we let Mo Williams score 52 points...",
-     "cursor": 63,
-     "note": "move the cursor 2 tokens left"
-    },
-    {
-     "text": "I'm sitting here with a stupid, puzzled looks on my faces to figure out how we let Mo Williams score 52 points...",
-     "cursor": 57,
-     "note": "backspace (delete \" tried\")"
-    },
-    {
-     "text": "I'm sitting here with a stupid, puzzled looks on my to figure out how we let Mo Williams score 52 points...",
-     "cursor": 51,
-     "note": "backspace (delete \" faces\")"
-    },
-    {
-     "text": "I'm sitting here with a stupid, puzzled looks on my face to figure out how we let Mo Williams score 52 points...",
-     "cursor": 56,
-     "note": "insert \" face\""
-    },
-    {
-     "text": "I'm sitting here with a stupid, puzzled looks on my face trying to figure out how we let Mo Williams score 52 points...",
-     "cursor": 63,
-     "note": "insert \" trying\""
-    },
-    {
-     "text": "I'm sitting here with a stupid, puzzled looks on my face trying to figure out how we let Mo Williams score 52 points...",
-     "cursor": 45,
-     "note": "move the cursor 4 tokens left"
-    },
-    {
-     "text": "I'm sitting here with a stupid, puzzled on my face trying to figure out how we let Mo Williams score 52 points...",
-     "cursor": 39,
-     "note": "backspace (delete \" looks\")"
-    },
-    {
-     "text": "I'm sitting here with a stupid, puzzled look on my face trying to figure out how we let Mo Williams score 52 points...",
-     "cursor": 44,
-     "note": "insert \" look\""
-    },
-    {
-     "text": "I'm sitting here with a stupid, puzzled look on my face trying to figure out how we let Mo Williams score 52 points...",
-     "cursor": 44,
-     "note": "stop"
-    }
-   ],
-   "counts": {
-    "actions": 17,
-    "inserts": 5,
-    "moves": 6,
-    "backspaces": 5
-   },
-   "prompt": "Fix grammatical mistakes in this sentence: I'm sitting here with a stupid, puzzled looks on my faces tried to figure out how we letting Mo Williams score 52 point...",
-   "reference": "I'm sitting here with a stupid, puzzled look on my face trying to figure out how we let Mo Williams score 52 points.",
-   "compare": {
-    "label": "AR rewriter 300M",
-    "text": "I'm sitting here with a stupid, puzzled look on my face trying to figure out how we let Mo Williams score 52 points...",
-    "note": "Same size, same training data, but writes the whole output from scratch, left to right. SARI vs. the human reference: AR rewriter 98.3, Reviser-Edit 98.3 (higher is better)."
-   }
-  },
-  {
    "id": "write-300m-wine",
    "title": "Writing out of order",
    "model": "Reviser 300M (run-and-jump + Delete + RL)",
@@ -1127,6 +839,294 @@
    },
    "prompt": "We were in a posh part of Kent (no not Dover!!) somewhere near Ashford on Thursday night just gone. We had been hired to ensure a well known (",
    "locked_prefix_chars": 142
+  },
+  {
+   "id": "edit-300m-plurals",
+   "title": "Three grammar fixes, back to front",
+   "model": "Reviser-Edit 300M",
+   "why": "Starts at the end of the sentence and jumps back to each error (choice, sale, offered), fixing all three in 14 actions and matching the human reference exactly; the AR rewriter retyped all 27 tokens and missed one.",
+   "steps": [
+    {
+     "text": "It offered recommendations for various stores, fashion matching, favorite competitive products, special sale of new arrivals, editor's choice, and more.",
+     "cursor": 152,
+     "note": "The input sentence, with the cursor at its end."
+    },
+    {
+     "text": "It offered recommendations for various stores, fashion matching, favorite competitive products, special sale of new arrivals, editor's choice, and more.",
+     "cursor": 141,
+     "note": "move the cursor 4 tokens left"
+    },
+    {
+     "text": "It offered recommendations for various stores, fashion matching, favorite competitive products, special sale of new arrivals, editor's, and more.",
+     "cursor": 134,
+     "note": "backspace (delete \" choice\")"
+    },
+    {
+     "text": "It offered recommendations for various stores, fashion matching, favorite competitive products, special sale of new arrivals, editor's choices, and more.",
+     "cursor": 142,
+     "note": "insert \" choices\""
+    },
+    {
+     "text": "It offered recommendations for various stores, fashion matching, favorite competitive products, special sale of new arrivals, editor's choices, and more.",
+     "cursor": 124,
+     "note": "move the cursor 4 tokens left"
+    },
+    {
+     "text": "It offered recommendations for various stores, fashion matching, favorite competitive products, special sale of new arrivals, editor's choices, and more.",
+     "cursor": 111,
+     "note": "move the cursor 2 tokens left"
+    },
+    {
+     "text": "It offered recommendations for various stores, fashion matching, favorite competitive products, special sale of new arrivals, editor's choices, and more.",
+     "cursor": 108,
+     "note": "move the cursor 1 token left"
+    },
+    {
+     "text": "It offered recommendations for various stores, fashion matching, favorite competitive products, special of new arrivals, editor's choices, and more.",
+     "cursor": 103,
+     "note": "backspace (delete \" sale\")"
+    },
+    {
+     "text": "It offered recommendations for various stores, fashion matching, favorite competitive products, special sales of new arrivals, editor's choices, and more.",
+     "cursor": 109,
+     "note": "insert \" sales\""
+    },
+    {
+     "text": "It offered recommendations for various stores, fashion matching, favorite competitive products, special sales of new arrivals, editor's choices, and more.",
+     "cursor": 54,
+     "note": "move the cursor 8 tokens left"
+    },
+    {
+     "text": "It offered recommendations for various stores, fashion matching, favorite competitive products, special sales of new arrivals, editor's choices, and more.",
+     "cursor": 30,
+     "note": "move the cursor 4 tokens left"
+    },
+    {
+     "text": "It offered recommendations for various stores, fashion matching, favorite competitive products, special sales of new arrivals, editor's choices, and more.",
+     "cursor": 10,
+     "note": "move the cursor 2 tokens left"
+    },
+    {
+     "text": "It recommendations for various stores, fashion matching, favorite competitive products, special sales of new arrivals, editor's choices, and more.",
+     "cursor": 2,
+     "note": "backspace (delete \" offered\")"
+    },
+    {
+     "text": "It offers recommendations for various stores, fashion matching, favorite competitive products, special sales of new arrivals, editor's choices, and more.",
+     "cursor": 9,
+     "note": "insert \" offers\""
+    },
+    {
+     "text": "It offers recommendations for various stores, fashion matching, favorite competitive products, special sales of new arrivals, editor's choices, and more.",
+     "cursor": 9,
+     "note": "stop"
+    }
+   ],
+   "counts": {
+    "actions": 14,
+    "inserts": 3,
+    "moves": 7,
+    "backspaces": 3
+   },
+   "prompt": "Fix grammar: It offered recommendations for various stores, fashion matching, favorite competitive products, special sale of new arrivals, editor's choice, and more.",
+   "reference": "It offers recommendations for various stores, fashion matching, favorite competitive products, special sales of new arrivals, editor's choices, and more.",
+   "compare": {
+    "label": "AR rewriter 300M",
+    "text": "It offers recommendations for various stores, fashion matching, favorite competitive products, special sales of new arrivals, editor's choice, and more.",
+    "note": "Same size, same training data, but writes the whole output from scratch, left to right. SARI vs. the human reference: AR rewriter 90.2, Reviser-Edit 100.0 (higher is better)."
+   }
+  },
+  {
+   "id": "edit-100m-only",
+   "title": "Moving one word",
+   "model": "Reviser-Edit 100M",
+   "why": "Clarifies the sentence by deleting \"only\" and retyping it one word earlier, plus removing a double space: an exact match in 11 actions. The AR rewriter dropped \"only\", which changes the meaning.",
+   "steps": [
+    {
+     "text": "By 2008  the factory at Palmela will be only producing the multi-purpose vehicle Sharan and the Eos models.",
+     "cursor": 107,
+     "note": "The input sentence, with the cursor at its end."
+    },
+    {
+     "text": "By 2008  the factory at Palmela will be only producing the multi-purpose vehicle Sharan and the Eos models.",
+     "cursor": 80,
+     "note": "move the cursor 8 tokens left"
+    },
+    {
+     "text": "By 2008  the factory at Palmela will be only producing the multi-purpose vehicle Sharan and the Eos models.",
+     "cursor": 58,
+     "note": "move the cursor 4 tokens left"
+    },
+    {
+     "text": "By 2008  the factory at Palmela will be only producing the multi-purpose vehicle Sharan and the Eos models.",
+     "cursor": 44,
+     "note": "move the cursor 2 tokens left"
+    },
+    {
+     "text": "By 2008  the factory at Palmela will be producing the multi-purpose vehicle Sharan and the Eos models.",
+     "cursor": 39,
+     "note": "backspace (delete \" only\")"
+    },
+    {
+     "text": "By 2008  the factory at Palmela will be producing the multi-purpose vehicle Sharan and the Eos models.",
+     "cursor": 36,
+     "note": "move the cursor 1 token left"
+    },
+    {
+     "text": "By 2008  the factory at Palmela will only be producing the multi-purpose vehicle Sharan and the Eos models.",
+     "cursor": 41,
+     "note": "insert \" only\""
+    },
+    {
+     "text": "By 2008  the factory at Palmela will only be producing the multi-purpose vehicle Sharan and the Eos models.",
+     "cursor": 23,
+     "note": "move the cursor 4 tokens left"
+    },
+    {
+     "text": "By 2008  the factory at Palmela will only be producing the multi-purpose vehicle Sharan and the Eos models.",
+     "cursor": 12,
+     "note": "move the cursor 2 tokens left"
+    },
+    {
+     "text": "By 2008  the factory at Palmela will only be producing the multi-purpose vehicle Sharan and the Eos models.",
+     "cursor": 8,
+     "note": "move the cursor 1 token left"
+    },
+    {
+     "text": "By 2008 the factory at Palmela will only be producing the multi-purpose vehicle Sharan and the Eos models.",
+     "cursor": 7,
+     "note": "backspace (delete \" \")"
+    },
+    {
+     "text": "By 2008 the factory at Palmela will only be producing the multi-purpose vehicle Sharan and the Eos models.",
+     "cursor": 7,
+     "note": "stop"
+    }
+   ],
+   "counts": {
+    "actions": 11,
+    "inserts": 1,
+    "moves": 7,
+    "backspaces": 2
+   },
+   "prompt": "Make this text clearer: By 2008  the factory at Palmela will be only producing the multi-purpose vehicle Sharan and the Eos models.",
+   "reference": "By 2008 the factory at Palmela will only be producing the multi-purpose vehicle Sharan and the Eos models.",
+   "compare": {
+    "label": "AR rewriter 100M",
+    "text": "By 2008 the factory at Palmela will be producing the multi-purpose vehicle Sharan and the Eos models.",
+    "note": "Same size, same training data, but writes the whole output from scratch, left to right. SARI vs. the human reference: AR rewriter 74.5, Reviser-Edit 100.0 (higher is better)."
+   }
+  },
+  {
+   "id": "edit-300m-puzzled",
+   "title": "Five fixes in one sentence",
+   "model": "Reviser-Edit 300M",
+   "why": "Fixes point/points, letting/let, faces/face, tried/trying and looks/look by jumping between them in 17 actions, leaving the rest of the sentence untouched.",
+   "steps": [
+    {
+     "text": "I'm sitting here with a stupid, puzzled looks on my faces tried to figure out how we letting Mo Williams score 52 point...",
+     "cursor": 122,
+     "note": "The input sentence, with the cursor at its end."
+    },
+    {
+     "text": "I'm sitting here with a stupid, puzzled looks on my faces tried to figure out how we letting Mo Williams score 52 point...",
+     "cursor": 119,
+     "note": "move the cursor 1 token left"
+    },
+    {
+     "text": "I'm sitting here with a stupid, puzzled looks on my faces tried to figure out how we letting Mo Williams score 52...",
+     "cursor": 113,
+     "note": "backspace (delete \" point\")"
+    },
+    {
+     "text": "I'm sitting here with a stupid, puzzled looks on my faces tried to figure out how we letting Mo Williams score 52 points...",
+     "cursor": 120,
+     "note": "insert \" points\""
+    },
+    {
+     "text": "I'm sitting here with a stupid, puzzled looks on my faces tried to figure out how we letting Mo Williams score 52 points...",
+     "cursor": 95,
+     "note": "move the cursor 4 tokens left"
+    },
+    {
+     "text": "I'm sitting here with a stupid, puzzled looks on my faces tried to figure out how we letting Mo Williams score 52 points...",
+     "cursor": 92,
+     "note": "move the cursor 1 token left"
+    },
+    {
+     "text": "I'm sitting here with a stupid, puzzled looks on my faces tried to figure out how we Mo Williams score 52 points...",
+     "cursor": 84,
+     "note": "backspace (delete \" letting\")"
+    },
+    {
+     "text": "I'm sitting here with a stupid, puzzled looks on my faces tried to figure out how we let Mo Williams score 52 points...",
+     "cursor": 88,
+     "note": "insert \" let\""
+    },
+    {
+     "text": "I'm sitting here with a stupid, puzzled looks on my faces tried to figure out how we let Mo Williams score 52 points...",
+     "cursor": 73,
+     "note": "move the cursor 4 tokens left"
+    },
+    {
+     "text": "I'm sitting here with a stupid, puzzled looks on my faces tried to figure out how we let Mo Williams score 52 points...",
+     "cursor": 63,
+     "note": "move the cursor 2 tokens left"
+    },
+    {
+     "text": "I'm sitting here with a stupid, puzzled looks on my faces to figure out how we let Mo Williams score 52 points...",
+     "cursor": 57,
+     "note": "backspace (delete \" tried\")"
+    },
+    {
+     "text": "I'm sitting here with a stupid, puzzled looks on my to figure out how we let Mo Williams score 52 points...",
+     "cursor": 51,
+     "note": "backspace (delete \" faces\")"
+    },
+    {
+     "text": "I'm sitting here with a stupid, puzzled looks on my face to figure out how we let Mo Williams score 52 points...",
+     "cursor": 56,
+     "note": "insert \" face\""
+    },
+    {
+     "text": "I'm sitting here with a stupid, puzzled looks on my face trying to figure out how we let Mo Williams score 52 points...",
+     "cursor": 63,
+     "note": "insert \" trying\""
+    },
+    {
+     "text": "I'm sitting here with a stupid, puzzled looks on my face trying to figure out how we let Mo Williams score 52 points...",
+     "cursor": 45,
+     "note": "move the cursor 4 tokens left"
+    },
+    {
+     "text": "I'm sitting here with a stupid, puzzled on my face trying to figure out how we let Mo Williams score 52 points...",
+     "cursor": 39,
+     "note": "backspace (delete \" looks\")"
+    },
+    {
+     "text": "I'm sitting here with a stupid, puzzled look on my face trying to figure out how we let Mo Williams score 52 points...",
+     "cursor": 44,
+     "note": "insert \" look\""
+    },
+    {
+     "text": "I'm sitting here with a stupid, puzzled look on my face trying to figure out how we let Mo Williams score 52 points...",
+     "cursor": 44,
+     "note": "stop"
+    }
+   ],
+   "counts": {
+    "actions": 17,
+    "inserts": 5,
+    "moves": 6,
+    "backspaces": 5
+   },
+   "prompt": "Fix grammatical mistakes in this sentence: I'm sitting here with a stupid, puzzled looks on my faces tried to figure out how we letting Mo Williams score 52 point...",
+   "reference": "I'm sitting here with a stupid, puzzled look on my face trying to figure out how we let Mo Williams score 52 points.",
+   "compare": {
+    "label": "AR rewriter 300M",
+    "text": "I'm sitting here with a stupid, puzzled look on my face trying to figure out how we let Mo Williams score 52 points...",
+    "note": "Same size, same training data, but writes the whole output from scratch, left to right. SARI vs. the human reference: AR rewriter 98.3, Reviser-Edit 98.3 (higher is better)."
+   }
   },
   {
    "id": "edit-100m-fatty-acids",
